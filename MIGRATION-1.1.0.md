@@ -30,3 +30,7 @@ The script refuses to substitute a debug key. Signing keys and passwords must no
 Alternatively, `eas.json` provides preview APK and production AAB profiles for an authenticated Expo account with the correct existing Android credentials. Do not generate replacement production credentials for the existing Play app.
 
 Publishing source does not update existing installed APKs by itself: distribute the correctly signed app update through the existing store/channel. No Play submission is performed automatically.
+
+## Mobile performance update
+
+The browser scene uses CSS transforms for spray/fall/landing effects, with event-only React updates and pause-aware timers. Music uses full-length 64 kbps mono MP3 streams under `audio/mobile/`; original masters remain unchanged in source. Setup/level browsing warms one song silently, Play reuses it, and next-track downloading starts near the end. Effect voices are capped at six. The compact static output is about 17 MB.

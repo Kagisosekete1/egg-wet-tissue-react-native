@@ -22,6 +22,7 @@ function App(){
  const [visualMode,setVisualMode]=useState(initialVisual==='full'?'full':'light');
  const changeVisual=mode=>{setVisualMode(mode);write('egg-visual-mode',mode);document.documentElement.dataset.visual=mode;};
  const [route,setRoute]=useState(getRoute),[progress,setProgress]=useState(()=>loadProgress(read(KEY,null))),[audioOn,setAudioOn]=useState(()=>read('egg-2d-sound','1')==='1'),[best,setBest]=useState(()=>Number(read('egg-2d-best',0))||0);
+ useEffect(()=>{if(route.path==='setup'||route.path==='levels')gameAudio.prepare();},[route.path]);
  const progressRef=useRef(progress),reported=useRef(new Set());
  const [musicOn,setMusicOn]=useState(()=>read('egg-2d-music','1')==='1');
  useEffect(()=>{gameAudio.setEnabled(audioOn);gameAudio.setMusicEnabled(musicOn);},[audioOn,musicOn]);
@@ -30,7 +31,7 @@ function App(){
  useEffect(()=>{const changed=()=>setRoute(getRoute());window.addEventListener('hashchange',changed);return()=>window.removeEventListener('hashchange',changed);},[]);
  useEffect(()=>{write('egg-2d-setup',JSON.stringify(settings));},[settings]);
  function updateProgress(next){progressRef.current=next;setProgress(next);write(KEY,JSON.stringify(next));}
- function navigate(path){location.hash=`/${path}`;setRoute(getRoute());}
+ function navigate(path){if(path==='setup'||path==='levels')gameAudio.prepare();location.hash=`/${path}`;setRoute(getRoute());}
  function launch(level){if(level&&!isLevelUnlocked(progressRef.current,level.id))return;const config=level?{mode:'computer',difficulty:level.difficulty,gameMode:level.gameMode,level:String(level.id)}:settings;gameAudio.startRound();gameAudio.unlock();location.hash='/play?'+new URLSearchParams(config).toString();setRoute(getRoute());}
  function onRound(game,context){const next=recordRound(progressRef.current,game,context);updateProgress(next);if(game.mode==='computer'&&game.current===2){const last=next.history[0];if(last&&last.score>best){setBest(last.score);write('egg-2d-best',last.score);}}if(account.user?.id&&!reported.current.has(game.gameId)){reported.current.add(game.gameId);const result={gameId:game.gameId,difficulty:game.difficulty,gameMode:game.gameMode,mode:game.mode,safeSprays:game.safeSprays,rounds:game.rounds,finalRoll:game.lastRoll,won:game.current===2};recordGameResult(result).then(()=>account.refresh()).catch(()=>savePendingResult(account.user.id,result));}return next.history.find(h=>h.id===game.gameId);}
  function buy(type,kind){const p=progressRef.current,item=(kind==='boost'?POWERUP_CATALOG:SHIELDS).find(i=>i.type===type);if(type==='lucky_roll')return 'One roll per player: rerolls are disabled.';if(!item||p.points<item.price)return 'Not enough coins. Play a level or collect a gift.';const next={...p,points:p.points-item.price};if(kind==='boost')next.inventory={...p.inventory,[type]:(p.inventory?.[type]||0)+1};else next.shields=[...(p.shields||[]),{id:uuid(),type,hits:item.hits,equipped:false}];updateProgress(next);return `${item.name} added to your bag.`;}

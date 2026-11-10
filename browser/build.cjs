@@ -5,7 +5,9 @@ esbuild.buildSync({entryPoints:['src/web/main.jsx'],bundle:true,minify:true,sour
 
 require('fs').cpSync('assets/audio','dist/audio',{recursive:true});
 
-const music=fs.readdirSync('assets/audio/game-music').filter(file=>/\.(mp3|m4a)$/.test(file)).map(file=>'/audio/game-music/'+file);
+const music=fs.readdirSync('assets/audio/mobile').filter(file=>file.endsWith('.mp3')).map(file=>'/audio/mobile/'+file);
+// Keep original masters in source; ship only the smaller progressive streams.
+for(const file of fs.readdirSync('dist/audio/game-music'))if(/\.(mp3|m4a)$/.test(file))fs.unlinkSync('dist/audio/game-music/'+file);
 const effects=fs.readdirSync('assets/audio').filter(file=>/\.(wav|ogg)$/.test(file)).map(file=>'/audio/'+file);
 const fonts=fs.readdirSync('public/fonts').filter(file=>file.endsWith('.woff2')).map(file=>'/fonts/'+file);
 const core=['/launch.js','/index.html','/game.js','/game.css','/manifest.webmanifest','/icons/icon-192.png','/icons/icon-512.png','/icons/icon-180.png','/icons/maskable-512.png',...effects,...fonts];
