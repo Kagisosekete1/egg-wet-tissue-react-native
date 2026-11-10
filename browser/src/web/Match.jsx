@@ -1,3 +1,4 @@
+import {CountryBadge} from './Community';
 import GameIcon,{boostIcon} from './GameIcon';
 import {createLevelGame,levelChallenge} from './adventure';
 import {Celebration,PrizeArt} from './RewardHub';
@@ -10,7 +11,7 @@ import {finishRoll,passDie,useBoost,resolveCounter,tissueFeedback} from './turn-
 import {gameAudio} from './audio';
 import {roundPoints,STYLES} from './progression';
 
-export default function Match({settings,level,onExit,onRound,onNext,audioOn,musicOn,onToggleAudio,playerName='Player',best=0,inventory={},consumeBoost,shield,consumeShield}){
+export default function Match({settings,level,onExit,onRound,onNext,audioOn,musicOn,onToggleAudio,playerName='Player',countryCode,best=0,inventory={},consumeBoost,shield,consumeShield}){
  const [game,setGame]=useState(()=>createLevelGame(settings,level));const gameRef=useRef(game);
  const [overlay,setOverlay]=useState(null),[busy,setBusy]=useState(false),[sprayToken,setSprayToken]=useState(0),[resetToken,setResetToken]=useState(0),[face,setFace]=useState(1),[series,setSeries]=useState([0,0]),[result,setResult]=useState(null);
  const [scheduler]=useState(()=>new Scheduler());const seriesRef=useRef([0,0]),lastRollOwner=useRef(null),actionLock=useRef(false),onRoundRef=useRef(onRound);
@@ -46,7 +47,7 @@ export default function Match({settings,level,onExit,onRound,onNext,audioOn,musi
  const status=over?'Oops… tissue down!':game.phase==='rolling'?'Give it a good roll…':game.phase==='waiting'?`Passing the die to ${game.current===1?(game.mode==='computer'?'Computer':'Player 2'):(game.mode==='computer'?playerName:'Player 1')}…`:game.phase==='counter'?'Counter the incoming attack':ai?'Computer’s turn…':game.phase==='ready'?'Roll the die to begin!':`Spray ${remaining} more time${remaining===1?'':'s'}!`;
  const style=STYLES.find(s=>s.id===game.gameMode);
  return <main className={`game-frame ${paused?'paused':''}`}>
- <header className="topbar"><button className="back-button" aria-label={level?'Back to levels':'Back to home'} onClick={onExit}>‹</button><div className="match-heading"><b>{level?`LEVEL ${level.id} · ${level.title}`:style.name}</b><small>{game.difficulty} · {game.mode==='friend'?'Pass & play':'Vs computer'}</small></div><div className="top-buttons"><button className="icon-button" aria-label={audioOn?'Mute sound':'Enable sound'} onClick={onToggleAudio}><GameIcon name={audioOn?'sound':'mute'} size={23}/></button><button className="icon-button" aria-label="Pause game" onClick={()=>setOverlay('pause')}><GameIcon name="pause" size={22}/></button></div></header>
+ <header className="topbar"><button className="back-button" aria-label={level?'Back to levels':'Back to home'} onClick={onExit}>‹</button><div className="match-heading"><b>{level?`LEVEL ${level.id} · ${level.title}`:style.name}</b><CountryBadge code={countryCode}/><small>{game.difficulty} · {game.mode==='friend'?'Pass & play':'Vs computer'}</small></div><div className="top-buttons"><button className="icon-button" aria-label={audioOn?'Mute sound':'Enable sound'} onClick={onToggleAudio}><GameIcon name={audioOn?'sound':'mute'} size={23}/></button><button className="icon-button" aria-label="Pause game" onClick={()=>setOverlay('pause')}><GameIcon name="pause" size={22}/></button></div></header>
  <section className="hud"><div className="hud-row"><span className="turn-pill"><i/>{over?'Tissue torn!':game.current===1&&game.mode==='computer'?'Your turn':`${turn}’s turn`}</span><span className="best">{game.gameMode==='tour'?`MATCH ${series[0]} – ${series[1]}`:<>BEST <b>{best}</b></>}</span></div><div className="meter" role="meter" aria-label="Tissue moisture" aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(danger*100)}><div style={{width:`${Math.max(4,danger*100)}%`}}/><span>{feedback.title}</span></div></section>
  <section className={`tissue-coach stage-${feedback.stage}`} role="status"><b>{feedback.title}</b><span>{actionHint}</span>{level&&<small className="challenge-tag">✦ {levelChallenge(level).name}: {levelChallenge(level).detail}</small>}</section>
  <section className={`scene-window world-scene`}><CartoonScene worldIndex={level?.worldIndex||0} danger={danger} sprayToken={sprayToken} falling={over} fallVariant="wobble" resetToken={resetToken} paused={paused} onImpact={()=>ping('crash')}/><div className="scene-tag">{level?.world||'GARDEN LAB'} <span>{level?.id||'01'}</span></div></section>

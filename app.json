@@ -2,28 +2,54 @@
   "expo": {
     "name": "Egg & Wet Tissue Challenge",
     "slug": "egg-wet-tissue-challenge",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "scheme": "eggtissue",
     "icon": "./assets/app-logo.png",
     "orientation": "portrait",
     "android": {
       "package": "com.semogrouptech.eggtissue",
-      "versionCode": 8,
+      "versionCode": 9,
       "adaptiveIcon": {
         "foregroundImage": "./assets/app-logo.png",
-        "backgroundColor": "#0755BD"
+        "backgroundColor": "#74d8e9"
       }
     },
     "plugins": [
-      ["onesignal-expo-plugin", {"mode":"production","smallIcons":["./assets/ic_stat_egg.png"],"smallIconAccentColor":"#0755BD"}],
+      [
+        "onesignal-expo-plugin",
+        {
+          "mode": "production",
+          "smallIcons": [
+            "./assets/ic_stat_egg.png"
+          ],
+          "smallIconAccentColor": "#0755BD"
+        }
+      ],
       "expo-asset",
       "expo-audio",
       "expo-router",
       "expo-secure-store",
-      ["expo-image-picker", {"microphonePermission": false}],
-      ["expo-splash-screen", {"image": "./assets/app-logo.png", "imageWidth": 240, "resizeMode": "contain", "backgroundColor": "#0755BD"}],
-      ["react-native-google-mobile-ads", {"androidAppId": "ca-app-pub-3333777272750017~7598669780"}]
+      [
+        "expo-image-picker",
+        {
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/app-logo.png",
+          "imageWidth": 260,
+          "resizeMode": "contain",
+          "backgroundColor": "#74d8e9"
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3333777272750017~7598669780"
+        }
+      ]
     ]
   }
 }
-

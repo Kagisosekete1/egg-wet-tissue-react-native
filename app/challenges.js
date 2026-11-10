@@ -19,7 +19,7 @@ export default function Challenges(){
       .or(`challenger_id.eq.${user.id},challenged_id.eq.${user.id}`).order('created_at',{ascending:false}).limit(100);
     if(error)Alert.alert('Battles unavailable',error.message);
     setItems(data||[]);setLoading(false);
-  },[user?.id]);
+  },[user]);
   useFocusEffect(useCallback(()=>{load();},[load]));
   async function respond(challenge,accept){
     setBusy(challenge.id);

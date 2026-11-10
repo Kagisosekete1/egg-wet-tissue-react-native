@@ -38,7 +38,7 @@ export default function GameScreen(){
   const {status:adStatus,show:showAd,load:loadAd,retry:retryAd,earnedReward,error:adError}=useRewardedAd({adUnitId:USE_TEST_ADS?TestIds.REWARDED:'ca-app-pub-3333777272750017/5128419119',autoLoad:adsReady&&active});
   useEffect(()=>{mobileAds().initialize().then(()=>setAdsReady(true)).catch(error=>{setAdInitError(error?.message||'Ad service could not start.');setAdsReady(true);});},[]);
   useFocusEffect(useCallback(()=>{setActive(true);return()=>setActive(false);},[]));
-  useEffect(()=>{if(active&&!over)startGame();},[active,over,startGame]);
+  useEffect(()=>{if(!active||over)return;const frame=requestAnimationFrame(()=>startGame());return()=>cancelAnimationFrame(frame);},[active,over,startGame]);
   useEffect(()=>{
     let current=true;
     if(!userId){setPowerInventory({});setPowerInventoryLoaded(true);return()=>{current=false;};}
