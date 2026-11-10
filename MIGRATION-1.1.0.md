@@ -34,3 +34,7 @@ Publishing source does not update existing installed APKs by itself: distribute 
 ## Mobile performance update
 
 The browser scene uses CSS transforms for spray/fall/landing effects, with event-only React updates and pause-aware timers. Music uses full-length 64 kbps mono MP3 streams under `audio/mobile/`; original masters remain unchanged in source. Setup/level browsing warms one song silently, Play reuses it, and next-track downloading starts near the end. Effect voices are capped at six. The compact static output is about 17 MB.
+
+## Scenery movement and birds
+
+A single 20 Hz controller updates only moving SVG transforms and opacity, independently of CSS animation support. Three original birds use separate animated wings. Clock tests verify real position changes and pause/background cancellation. The motion entry at `/motion?motion=on&repair=1&motion-repair=1` explicitly enables motion and targets stale-worker recovery without clearing saved progress.

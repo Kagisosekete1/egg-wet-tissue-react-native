@@ -5,6 +5,8 @@ export class SceneryMotion {
  paint(){const t=this.elapsed;for(const node of this.nodes){const kind=node.getAttribute('data-scenery-motion'),i=Number(node.getAttribute('data-motion-index')||0);let value;
   if(kind==='cloud')value=`translate(${Math.sin(t*(.32-i*.055)+i*1.8)*90} 0)`;
   if(kind==='helicopter')value=`translate(${((t*45+620)%1360)-140} 0)`;
+  if(kind==='bird'){const speed=[33,26,20][i%3],start=[320,820,540][i%3],x=i===1?1240-((t*speed+1240-start)%1400):((t*speed+start+100)%1400)-100,y=[350,445,525][i%3]+Math.sin(t*1.9+i*2)*15;value=`translate(${x} ${y})`;}
+  if(kind==='bird-wing')value=`rotate(${-18+Math.sin(t*11+i*2)*32})`;
   if(kind==='hover')value=`translate(0 ${Math.sin(t*2.8)*6})`;
   if(kind==='rotor')value=`scale(${.15+Math.abs(Math.cos(t*23))*.85} 1)`;
   if(kind==='egg')value=`translate(0 ${Math.sin(t*2.4)*3})`;

@@ -19,6 +19,6 @@ fs.copyFileSync('dist/sw.js','dist/offline-sw.js');
 const onlineHash=crypto.createHash('sha256').update(fs.readFileSync('dist/game.js')).update(fs.readFileSync('dist/game.css')).update(fs.readFileSync('dist/launch.js')).digest('hex').slice(0,12);
 let onlineHtml=fs.readFileSync('dist/index.html','utf8');
 for(const file of ['game.js','game.css','launch.js']){const name=file.replace('.', '-online-'+onlineHash+'.');fs.copyFileSync('dist/'+file,'dist/'+name);onlineHtml=onlineHtml.replace('./'+file,'./'+name);}
-fs.writeFileSync('dist/index.html',onlineHtml);fs.writeFileSync('dist/online.html',onlineHtml);
+fs.writeFileSync('dist/index.html',onlineHtml);fs.writeFileSync('dist/online.html',onlineHtml);fs.writeFileSync('dist/motion.html',onlineHtml);
 // Existing installs can update to a worker which stops intercepting network requests.
-fs.writeFileSync('dist/sw.js',`self.addEventListener('install',()=>self.skipWaiting());\nself.addEventListener('activate',event=>event.waitUntil((async()=>{await self.clients.claim();await self.registration.unregister();})()));\n`);
+fs.writeFileSync('dist/sw.js',`self.addEventListener('install',()=>self.skipWaiting());\nself.addEventListener('activate',event=>event.waitUntil((async()=>{await self.clients.claim();await self.registration.unregister();for(const client of await self.clients.matchAll({type:'window'})){const url=new URL(client.url);if(url.searchParams.get('motion-repair')==='1'){const next=new URL('motion?motion=on&recovered=15#/home',self.registration.scope);await client.navigate(next.href);}}})()));\n`);
