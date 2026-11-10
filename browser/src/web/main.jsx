@@ -12,7 +12,9 @@ import {POWERUP_CATALOG,uuid} from './rules';
 import './styles.css';
 const KEY='egg-2d-progress-v1';
 const initialVisual=read('egg-visual-mode',window.matchMedia('(max-width: 600px)').matches?'light':'full');
-const initialMotion=read('egg-scenery-motion',window.matchMedia('(prefers-reduced-motion: reduce)').matches?'off':'on');
+const requestedMotion=new URLSearchParams(location.search).get('motion');
+const initialMotion=requestedMotion==='on'?'on':read('egg-scenery-motion',window.matchMedia('(prefers-reduced-motion: reduce)').matches?'off':'on');
+if(requestedMotion==='on')write('egg-scenery-motion','on');
 document.documentElement.dataset.motion=initialMotion;
 document.documentElement.dataset.visual=initialVisual==='full'?'full':'light';
 function getRoute(){const [path,query='']=location.hash.replace(/^#\/?/,'').split('?');return {path:path||'home',params:new URLSearchParams(query)};}

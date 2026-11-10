@@ -2,7 +2,7 @@ import React,{memo} from 'react';
 import { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 import Helicopter from './Helicopter';
 import { outline } from '../palette';
-function Cloud({x,y,scale=1}){return <G className={`ambient-cloud cloud-${y}`}><G id={`moving-cloud-${y}`} transform={`translate(${x} ${y}) scale(${scale})`} fill="#fff8ef" opacity={.85}><Ellipse rx="100" ry="30"/><Circle cx="-40" cy="-22" r="35"/><Circle cx="16" cy="-40" r="49"/><Circle cx="65" cy="-14" r="30"/></G></G>;}
+function Cloud({x,y,scale=1}){return <G className={`ambient-cloud cloud-${y}`} data-scenery-motion="cloud" data-motion-index={y===300?0:y===410?1:2}><G id={`moving-cloud-${y}`} transform={`translate(${x} ${y}) scale(${scale})`} fill="#fff8ef" opacity={.85}><Ellipse rx="100" ry="30"/><Circle cx="-40" cy="-22" r="35"/><Circle cx="16" cy="-40" r="49"/><Circle cx="65" cy="-14" r="30"/></G></G>;}
 function Landscape({world}){return <G>
   <Rect width="1080" height="1300" fill="url(#sky)"/>
   <G><Circle cx="870" cy="155" r="86" fill="#ffda65"/><Circle cx="850" cy="135" r="57" fill="#fff19b"/>
