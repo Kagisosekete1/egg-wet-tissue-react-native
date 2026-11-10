@@ -12,11 +12,15 @@ import {POWERUP_CATALOG,uuid} from './rules';
 import './styles.css';
 const KEY='egg-2d-progress-v1';
 const initialVisual=read('egg-visual-mode',window.matchMedia('(max-width: 600px)').matches?'light':'full');
+const initialMotion=read('egg-scenery-motion',window.matchMedia('(prefers-reduced-motion: reduce)').matches?'off':'on');
+document.documentElement.dataset.motion=initialMotion;
 document.documentElement.dataset.visual=initialVisual==='full'?'full':'light';
 function getRoute(){const [path,query='']=location.hash.replace(/^#\/?/,'').split('?');return {path:path||'home',params:new URLSearchParams(query)};}
 function App(){
  const account=useAccount();
  const pwa=null;
+ const [motionOn,setMotionOn]=useState(initialMotion==='on');
+ const toggleMotion=()=>setMotionOn(value=>{write('egg-scenery-motion',value?'off':'on');document.documentElement.dataset.motion=value?'off':'on';return !value;});
  const [calendarTick,setCalendarTick]=useState(0);
  useEffect(()=>{const timer=setInterval(()=>setCalendarTick(v=>v+1),60000);return()=>clearInterval(timer);},[]);
  const [visualMode,setVisualMode]=useState(initialVisual==='full'?'full':'light');
@@ -42,8 +46,8 @@ function App(){
  const toggleMusic=()=>setMusicOn(v=>{write('egg-2d-music',v?'0':'1');gameAudio.setMusicEnabled(!v);gameAudio.unlock();return !v;});
  const levelId=Number(route.params.get('level')),level=levelAt(levelId),validLevel=level&&isLevelUnlocked(progress,level.id)?level:null;
  const matchSettings=validLevel?{mode:'computer',difficulty:validLevel.difficulty,gameMode:validLevel.gameMode}:{mode:route.params.get('mode')==='friend'?'friend':'computer',difficulty:['easy','normal','hard'].includes(route.params.get('difficulty'))?route.params.get('difficulty'):'normal',gameMode:['classic','sudden','chaos','tour'].includes(route.params.get('gameMode'))?route.params.get('gameMode'):'classic'};
- if(route.path==='play'&&(!levelId||validLevel))return <Match key={location.hash} settings={matchSettings} level={validLevel} onExit={()=>navigate(validLevel?'levels':'home')} onRound={onRound} onNext={()=>launch(levelAt(validLevel.id+1))} audioOn={audioOn} musicOn={musicOn} onToggleMusic={toggleMusic} onToggleAudio={toggleAudio} best={best} countryCode={account.profile.country_code} playerName={account.profile.username||progress.playerName} inventory={progress.inventory||{}} consumeBoost={consumeBoost} shield={(progress.shields||[]).find(s=>s.equipped&&s.hits>0)} consumeShield={consumeShield}/>;
+ if(route.path==='play'&&(!levelId||validLevel))return <Match motionOn={motionOn} onToggleMotion={toggleMotion} key={location.hash} settings={matchSettings} level={validLevel} onExit={()=>navigate(validLevel?'levels':'home')} onRound={onRound} onNext={()=>launch(levelAt(validLevel.id+1))} audioOn={audioOn} musicOn={musicOn} onToggleMusic={toggleMusic} onToggleAudio={toggleAudio} best={best} countryCode={account.profile.country_code} playerName={account.profile.username||progress.playerName} inventory={progress.inventory||{}} consumeBoost={consumeBoost} shield={(progress.shields||[]).find(s=>s.equipped&&s.hits>0)} consumeShield={consumeShield}/>;
  const page=route.path.startsWith('legal/')?'legal':['home','setup','levels','challenges','shop','results','settings','leaderboard','notifications'].includes(route.path)?route.path:'levels';
- return <Portal legalSlug={route.path.split('/')[1]} calendarTick={calendarTick} claimGift={()=>updateProgress(claimDailyGift(progressRef.current))} claimWelcome={()=>updateProgress(claimWelcome(progressRef.current))} claimMilestone={id=>updateProgress(claimMilestone(progressRef.current,id))} visualMode={visualMode} changeVisual={changeVisual} pwa={pwa} key={page} page={page} navigate={navigate} progress={progress} settings={settings} setSettings={setSettings} launch={launch} audioOn={audioOn} musicOn={musicOn} onToggleMusic={toggleMusic} onToggleAudio={toggleAudio} claim={id=>updateProgress(claimGoal(progressRef.current,id))} buy={buy} equip={equip} saveName={name=>updateProgress({...progressRef.current,playerName:name.trim().slice(0,24)||'Player'})} best={best}/>;
+ return <Portal motionOn={motionOn} onToggleMotion={toggleMotion} legalSlug={route.path.split('/')[1]} calendarTick={calendarTick} claimGift={()=>updateProgress(claimDailyGift(progressRef.current))} claimWelcome={()=>updateProgress(claimWelcome(progressRef.current))} claimMilestone={id=>updateProgress(claimMilestone(progressRef.current,id))} visualMode={visualMode} changeVisual={changeVisual} pwa={pwa} key={page} page={page} navigate={navigate} progress={progress} settings={settings} setSettings={setSettings} launch={launch} audioOn={audioOn} musicOn={musicOn} onToggleMusic={toggleMusic} onToggleAudio={toggleAudio} claim={id=>updateProgress(claimGoal(progressRef.current,id))} buy={buy} equip={equip} saveName={name=>updateProgress({...progressRef.current,playerName:name.trim().slice(0,24)||'Player'})} best={best}/>;
 }
 createRoot(document.getElementById('root')).render(<AccountProvider><App/></AccountProvider>);
