@@ -47,7 +47,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test:shields": "node ./tools/test-shields.mjs",
-    "test:powerups": "node ./tools/test-powerups.mjs"
+    "test:powerups": "node ./tools/test-powerups.mjs",
+    "test:ads": "node ./tools/test-rewarded-ad-bridge.mjs"
   },
   "private": true,
   "devDependencies": {

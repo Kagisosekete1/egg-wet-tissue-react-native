@@ -38,3 +38,7 @@ The browser scene uses CSS transforms for spray/fall/landing effects, with event
 ## Scenery movement and birds
 
 A single 20 Hz controller updates only moving SVG transforms and opacity, independently of CSS animation support. Three original birds use separate animated wings. Clock tests verify real position changes and pause/background cancellation. The motion entry at `/motion?motion=on&repair=1&motion-repair=1` explicitly enables motion and targets stale-worker recovery without clearing saved progress.
+
+## Watch Ad (Android)
+
+The new match screen restores an optional Watch Ad placement: repair damage from up to four sprays once per round, before the egg falls, without granting another die roll. The original AdMob rewarded unit and `USE_TEST_ADS` release flag are retained. Loading/closing without the SDK earned-reward event cannot grant a reward. Game actions, music and scenery pause while an ad is pending. No-fill, cancellation and timeout restore gameplay. Chrome reports that Android AdMob is unavailable rather than showing a fake advert. This native bridge requires the next signed Android build; APK/AAB delivery remains deferred. Run `npm run test:ads` for the native bridge lifecycle checks.

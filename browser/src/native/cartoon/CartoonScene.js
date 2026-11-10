@@ -24,6 +24,7 @@ export default function CartoonScene({worldIndex=0,danger=0,sprayToken=0,falling
  useEffect(()=>{const sub=AppState.addEventListener('change',s=>setForeground(s==='active'));return()=>sub.remove();},[]);
  useEffect(()=>{if(paused||!foreground)scheduler.pause();else scheduler.resume();},[paused,foreground,scheduler]);
  useEffect(()=>{if(previousSpray.current===sprayToken)return;previousSpray.current=sprayToken;setVisibleSpray(sprayToken);return scheduler.schedule(850,()=>setVisibleSpray(0));},[sprayToken,resetToken,scheduler]);
+ useEffect(()=>{setVisibleSpray(0);},[resetToken]);
  useEffect(()=>{setLanded(false);if(!falling)return;return scheduler.schedule(900,()=>{setLanded(true);callback.current?.();});},[falling,resetToken,scheduler]);
  useEffect(()=>()=>scheduler.clear(),[scheduler]);
  const world=useMemo(()=>worldAt(worldIndex),[worldIndex]),ratio=Math.max(0,Math.min(1,danger)),sag=ratio*100,spray=visibleSpray!==0,eggY=760+sag*.5;

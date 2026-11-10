@@ -44,3 +44,4 @@ html .cartoon-scene.scene-paused *{animation-play-state:paused!important}.motion
 
 /* Moving SVG nodes use presentation transforms, independent of CSS animation support. */
 [data-scenery-motion]{animation:none!important}
+.watch-ad-card{flex-shrink:0;display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:10px 16px max(10px,env(safe-area-inset-bottom));background:#f4e7ff;border-top:2px solid #c4a4d7}.watch-ad-card>div{flex:1;min-width:150px}.watch-ad-card b{display:flex;align-items:center;gap:5px;font-size:12px;color:#68477f}.watch-ad-card p{font-size:10px;line-height:1.4;color:#866791;margin-top:3px}.watch-ad-card .small-button{min-width:95px}.watch-ad-card .ad-message{flex-basis:100%;font-weight:800}@media(max-height:700px){.watch-ad-card{padding:7px 12px;gap:6px}.watch-ad-card p{font-size:9px}}
