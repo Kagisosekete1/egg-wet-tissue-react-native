@@ -15,8 +15,10 @@ const template=fs.readFileSync('scripts/sw-template.js','utf8');const digest=cry
 fs.writeFileSync('dist/sw.js',template.replace('__VERSION__',hash).replace('__CORE__',JSON.stringify(core)).replace('__MUSIC__',JSON.stringify(music)));
 
 fs.copyFileSync('dist/sw.js','dist/offline-sw.js');
+// Include the release marker so a deliberate refresh gets fresh browser asset URLs.
+const release=fs.existsSync('dist/release.json')?fs.readFileSync('dist/release.json'):Buffer.alloc(0);
 // Online release: fingerprint scripts so an old offline shell cannot supply stale code.
-const onlineHash=crypto.createHash('sha256').update(fs.readFileSync('dist/game.js')).update(fs.readFileSync('dist/game.css')).update(fs.readFileSync('dist/launch.js')).digest('hex').slice(0,12);
+const onlineHash=crypto.createHash('sha256').update(fs.readFileSync('dist/game.js')).update(fs.readFileSync('dist/game.css')).update(fs.readFileSync('dist/launch.js')).update(release).digest('hex').slice(0,12);
 let onlineHtml=fs.readFileSync('dist/index.html','utf8');
 for(const file of ['game.js','game.css','launch.js']){const name=file.replace('.', '-online-'+onlineHash+'.');fs.copyFileSync('dist/'+file,'dist/'+name);onlineHtml=onlineHtml.replace('./'+file,'./'+name);}
 fs.writeFileSync('dist/index.html',onlineHtml);fs.writeFileSync('dist/online.html',onlineHtml);fs.writeFileSync('dist/motion.html',onlineHtml);
