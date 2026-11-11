@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {ResultQueue,rankingError} from '../src/web/result-queue.js';
+import {avatarSources} from '../src/web/avatars.js';
+const storage=new Map(),calls=[],notices=[];let release,fail=false;
+const gate=new Promise(r=>release=r),queue=new ResultQueue({read:(k,f)=>storage.get(k)??f,write:(k,v)=>storage.set(k,v),notify:n=>notices.push(n),submit:async(result,userId)=>{calls.push([result.gameId,userId]);if(result.gameId==='one')await gate;if(fail)throw {code:'PGRST202',status:404};return {points_awarded:40,total_points:80};}});
+queue.enqueue('a',{gameId:'one'});queue.enqueue('a',{gameId:'one'});assert.equal(queue.pending('a').length,1);
+const first=queue.flush('a');assert.equal(queue.flush('a'),first);queue.enqueue('a',{gameId:'two'});queue.enqueue('b',{gameId:'other'});release();const report=await first;
+assert.equal(report.synced.length,1);assert.equal(report.pending,1);assert.equal(queue.pending('a')[0].gameId,'two');assert.equal(queue.pending('b')[0].gameId,'other');
+fail=true;const failed=await queue.flush('a');assert.equal(failed.pending,1);assert(rankingError(failed.error).includes('server update'));
+fail=false;await queue.flush('a');assert.equal(queue.pending('a').length,0);assert.equal(notices.length,2);assert(calls.every(c=>c[1]==='a'));assert.equal(queue.pending('b').length,1);
+const unavailable=new ResultQueue({read:(_k,f)=>f,write:()=>{},submit:()=>{}});assert.throws(()=>unavailable.enqueue('a',{gameId:'lost'}),/could not save/);
+assert.deepEqual(avatarSources({avatar_url:'  ',photo_url:'https://images.test/photo.jpg',avatar_urls:['https://images.test/photo.jpg','https://images.test/legacy.jpg','javascript:alert(1)']}),['https://images.test/photo.jpg','https://images.test/legacy.jpg']);assert.deepEqual(avatarSources(null),[]);
+console.log('PASS: points survive failed submissions and concurrent new rounds, duplicate flushes share work, account queues stay isolated, unsaved results are reported, and uploaded-photo alternates discard empty or unsafe URLs.');

@@ -86,9 +86,8 @@ export function applyLuckyRoll(game,value,random=Math.random){
 export function nextTurn(game){const current=game.extraTurn?game.current:game.current===1?2:1;return {...game,current,rounds:game.rounds+(!game.extraTurn&&current===1?1:0),phase:'ready',roll:0,sprayed:0,shield:false,double:false,slippery:false,extraTurn:false,lastShieldBlock:false,lastQuickEscapeBlock:false,luckyUsed:false,aiBoostAttempted:false,card:''};}
 /** @param {GameState} game @returns {GameState} */
 export function rewindGame(game){
-  if(!game.history.length||game.rewardsUsed>=1)return game;const snapshot=game.history[0],reviving=game.phase==='over';
-  // Repair the last four sprays while retaining the player's current turn.
-  // Replaying the computer's undone turn would immediately remove the benefit.
-  return {...game,damage:snapshot.damage,total:snapshot.total,safeSprays:snapshot.safeSprays,roll:reviving?0:game.roll,sprayed:reviving?0:game.sprayed,phase:reviving?'ready':game.phase,fallVariant:reviving?null:game.fallVariant,history:[],rewardsUsed:game.rewardsUsed+1};
+  if(!game.history.length||game.rewardsUsed>=1||game.phase!=='over')return game;
+  const snapshot=game.history[0],steps=game.history.length;
+  // Repair the last four sprays, then resume the existing die: never grant a reroll.
+  return {...game,damage:snapshot.damage,total:snapshot.total,safeSprays:snapshot.safeSprays,sprayed:Math.max(0,game.sprayed-steps),phase:'spraying',fallVariant:null,history:[],rewardsUsed:game.rewardsUsed+1,lastShieldBlock:false,lastQuickEscapeBlock:false};
 }
-

@@ -15,7 +15,7 @@ This edition reuses the original mobile game's rule module and the copied projec
 - Results: actual local computer-round history and a personal best. No invented leaderboard players.
 - Profile: local name, XP title, sound settings.
 
-Per the owner's instruction, everything stays offline: no existing game account, online invitations, global scores, notifications, payments, adverts or remote profile sync is connected. The Site’s current sharing settings are preserved. Computer round points follow the original signed scoring formula. Pass-and-play rounds do not affect solo points, levels or daily missions. Device storage can be cleared by the browser; it is not a cloud backup.
+The browser connects the original Supabase accounts, public rankings, profile photos and battle invitations. Adventure coins, levels and local tools remain on this device; account ranking points and online inventory are separate. Android rewarded adverts use the app bridge and are unavailable in Chrome. The Site’s current sharing settings are preserved. Computer round points follow the original signed scoring formula. Pass-and-play rounds do not affect solo points, levels or daily missions. Device storage can be cleared by the browser; it is not a cloud backup.
 
 ## Build and checks
 
@@ -82,3 +82,16 @@ Phones now default to Smooth mode, which keeps interactive egg/water/fall effect
 Checks cover phone Smooth defaults, startup panel removal, Play ordering, fresh load/roll/spray/back, animation preference persistence, recovery-worker activation/navigation scope, offline behavior and prior game rules. Physical-device recovery remains unverified pending a phone retest.
 
 The worker now catches CacheStorage open/read/body errors and falls back to network responses instead of rejecting navigation (which can produce ERR_FAILED). Recovery activation no longer depends on successful cache creation. Simulated cache-database failures now return working online HTML/JS, accurate offline status and a readable offline message rather than a rejected response. Core-cache cleanup is best-effort and does not touch local progress or saved music.
+
+
+### Shield, points and gift update
+
+Shield display names are Bubble Shield (1 hit), Golden Shield (2 hits) and Rainbow Shield (3 hits). Stored IDs, prices and owned copies are preserved. Matching copies stack in the tools tray; partially used shields stay separate.
+
+Home, Rankings and the round result show account ranking points separately from coins. Signed-in results are queued before submission and retry on refresh/focus, with per-account queues and server idempotency. No local point estimate is added to the leaderboard. Uploaded photo alternates are retained; migration 015 resolves legacy photos inside the public RPC without making private profiles readable.
+
+Every manual gift/mission claim starts one shared 24-hour wait. Accounts require migration 016; guests use a device timer. Gift confirmation requests persist so a lost response can be retried without granting twice. Match win rewards remain automatic. Apply 006, 015 and 016 in the existing Supabase project's SQL Editor.
+
+Watch Ad appears only on a human loss result. An earned Android advert repairs up to the last four sprays and resumes the existing die, once per round. The result stays provisional until the player ends the round, restarts or leaves; a successful revive cancels the provisional result. Chrome reports that the Android advert is unavailable.
+
+AI answers remain pending at the owner's request. Automated gameplay, UI/outbox/cooldown and local SQL checks are available; physical-device/browser visual QA is still outstanding.

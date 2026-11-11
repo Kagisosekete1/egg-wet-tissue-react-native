@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {claimWelcome,claimDailyGift,claimMilestone,dailyGift,dayKey} from '../src/web/rewards.js';
+import {loadProgress,claimGoal} from '../src/web/progression.js';
+import {CLAIM_WAIT_MS,giftCooldown} from '../src/web/gift-cooldown.js';
+const at=new Date('2026-11-11T21:59:00Z'),next=new Date(at.getTime()+CLAIM_WAIT_MS),earlier=new Date(next.getTime()-1);
+let p={...loadProgress(null),wins:1,daily:{[dayKey(at)]:{wins:1,games:3,sprays:15,claimed:[]}}};
+p=claimDailyGift(p,at,'a');assert.equal(p.points,100);assert.equal(giftCooldown(p,at,'a').remaining,CLAIM_WAIT_MS);
+assert.equal(claimWelcome(p,at,'a'),p);assert.equal(claimMilestone(p,'first-win',at,'a'),p);assert.equal(claimGoal(p,'wins',at,'a'),p);
+assert.equal(claimWelcome(p,earlier,'a'),p);assert(!giftCooldown(p,next,'a').remaining);assert(claimWelcome(p,next,'a').welcomeClaimed);
+assert(claimWelcome(p,at,'b').welcomeClaimed,'one account inherited another account cooldown');
+assert.equal(claimDailyGift(p,new Date('2026-11-11T22:01:00Z'),'a'),p,'midnight bypassed the 24-hour rule');
+assert(!dailyGift(p,next).claimed);assert.equal(dailyGift(p,next).day,2);
+const reloaded=loadProgress(JSON.stringify(p));assert.equal(claimWelcome(reloaded,earlier,'a'),reloaded);assert.equal(claimWelcome(reloaded,new Date(at.getTime()-1000),'a'),reloaded);
+console.log('PASS: one shared 24-hour wait blocks daily, welcome, milestone and mission claims, survives reload/midnight/clock rollback, opens at the exact boundary and keeps account timers separate.');

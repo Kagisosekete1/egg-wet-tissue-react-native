@@ -1,3 +1,4 @@
+import {giftCooldown,markGiftClaim} from './gift-cooldown.js';
 import {dayKey,roundReward,grantRoundPrize} from './rewards.js';
 import {worldAt} from './worlds.js';
 export const LEVELS=[
@@ -31,5 +32,5 @@ export function recordRound(progress,game,{levelId=null,seriesComplete=true,seri
  return {...rewarded,winStreak:prize.streak,wins:progress.wins+(win?1:0),games:progress.games+1,safeSprays:progress.safeSprays+game.safeSprays,levels,history:[{id:game.gameId,win,score,earned:prize.coins,prize,stars:levelId?levels[levelId]||0:0,mode:game.gameMode,difficulty:game.difficulty,date:date.toISOString(),levelId},...progress.history].slice(0,30),daily:{[key]:{...daily,games:daily.games+1,wins:daily.wins+(win?1:0),sprays:daily.sprays+game.safeSprays}}};
 }
 export function dailyGoals(progress,date=new Date()){const d=progress.daily[todayKey(date)]||{games:0,wins:0,sprays:0,claimed:[]};return [{id:'games',title:'Back for more',detail:'Finish 3 games vs the computer.',value:d.games,target:3,xp:50,coins:150},{id:'wins',title:'Egg-cellent victory',detail:'Win 1 round vs the computer.',value:d.wins,target:1,xp:40,coins:100},{id:'sprays',title:'Gentle touch',detail:'Make 12 safe sprays vs the computer.',value:d.sprays,target:12,xp:60,coins:200}].map(g=>({...g,claimed:(d.claimed||[]).includes(g.id)}));}
-export function claimGoal(progress,id,date=new Date()){const key=todayKey(date),goal=dailyGoals(progress,date).find(g=>g.id===id);if(!goal||goal.claimed||goal.value<goal.target)return progress;const d=progress.daily[key];return {...progress,xp:progress.xp+goal.xp,points:progress.points+goal.coins,daily:{...progress.daily,[key]:{...d,claimed:[...(d.claimed||[]),id]}}};}
-export const SHIELDS=[{type:'basic',name:'Basic Shield',price:600,hits:1,detail:'Blocks one fall-causing hit.'},{type:'golden',name:'Golden Shield',price:1200,hits:2,detail:'Blocks two fall-causing hits.'},{type:'super',name:'Super Shield',price:1800,hits:3,detail:'Blocks three fall-causing hits.'}];
+export function claimGoal(progress,id,date=new Date(),actor='guest'){const key=todayKey(date),goal=dailyGoals(progress,date).find(g=>g.id===id);if(!goal||goal.claimed||goal.value<goal.target||giftCooldown(progress,date,actor).remaining)return progress;const d=progress.daily[key];return markGiftClaim({...progress,xp:progress.xp+goal.xp,points:progress.points+goal.coins,daily:{...progress.daily,[key]:{...d,claimed:[...(d.claimed||[]),id]}}},date,actor);}
+export {SHIELD_CATALOG as SHIELDS} from './shields.js';

@@ -42,7 +42,7 @@ Play: https://egg-tissue-cartoon-play.seketefilmstv.chatgpt.site.
 
 The `browser/` directory contains the offline browser game with the original rule module and 2D cartoon renderer. It restores Classic, Sudden Death, Chaos Cards and first-to-two Tournament modes; computer and pass-and-play; original boost/shield item rules and prices; and the high-tension countdown. New features include a home/menu flow, 12 unlockable levels, star ratings, daily XP missions, local shop/inventory, local player name and match history.
 
-Everything stays in the browser as requested: device points and inventory are separate from original game accounts. No existing accounts, online invitations, global leaderboard, adverts or payments are connected.
+Adventure coins, levels and local inventory stay in the browser. The online design connects original accounts, ranking points, profile photos and battle invitations through Supabase. Android rewarded adverts use the app bridge; Chrome cannot show Android AdMob adverts. Real-money purchases remain disabled.
 
 Inside `browser/`, run `npm ci`, `npm run build`, and `npm test`. The native Android app remains in the root. The browser adaptation uses hash routes and does not change the native application's navigation or production backend.
 

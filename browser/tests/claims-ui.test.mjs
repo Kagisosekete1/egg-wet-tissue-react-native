@@ -1,0 +1,36 @@
+import {JSDOM,VirtualConsole} from 'jsdom';import fs from 'node:fs';import assert from 'node:assert/strict';
+const DAY=86400000,a='10000000-0000-4000-8000-000000000001',b='10000000-0000-4000-8000-000000000002',wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function run(missing=false){let now=Date.parse('2026-11-11T21:59:00Z'),points=100,pointWrites=0,allowPoints=false,nextClaim=0,dropReceipt=true;const receipts=new Map(),errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));const user={id:a,email:'fixture@example.test',user_metadata:{username:'Me'}},me=()=>({id:a,username:'Me',points,wins:2,country_code:'ZA'}),friend={id:b,username:'Friend',points:80,wins:1,country_code:'ZA',avatar_url:'https://images.test/stale.jpg'};
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://egg.test/motion#/home',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){
+  const DateBase=w.Date;w.Date=class extends DateBase{constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}};
+  w.localStorage.setItem('egg-2d-progress-v1',JSON.stringify({version:1,points:150}));
+  if(!missing)w.localStorage.setItem('egg-pending-results-'+a,JSON.stringify([{gameId:'20000000-0000-4000-8000-000000000001',difficulty:'hard',gameMode:'classic',mode:'computer',safeSprays:0,rounds:0,finalRoll:1,won:true}]));
+  const payload=Buffer.from(JSON.stringify({sub:a,exp:Math.floor(now/1000)+365*86400,aud:'authenticated'})).toString('base64url');w.localStorage.setItem('sb-glnkdakwkhaeywpvqvae-auth-token',JSON.stringify({access_token:'eyJhbGciOiJIUzI1NiJ9.'+payload+'.fixture',refresh_token:'fixture',expires_at:Math.floor(now/1000)+365*86400,token_type:'bearer',user}));
+  w.Headers=Headers;w.Request=Request;w.Response=Response;w.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});w.Audio=class{play(){return Promise.resolve();}pause(){}load(){}addEventListener(){}removeAttribute(){}};
+  w.fetch=async(input,options={})=>{const url=String(input),name=url.split('/').at(-1)?.split('?')[0],reply=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json'}});
+   if(url.includes('/auth/v1/user'))return reply(user);
+   if(url.includes('/rpc/')){const body=JSON.parse(options.body||'{}');
+    if(name==='get_game_reward_status')return missing?reply({code:'PGRST202'},404):reply({last_claim_at:nextClaim?new Date(nextClaim-DAY).toISOString():null,next_claim_at:nextClaim?new Date(nextClaim).toISOString():null,server_time:new Date(now).toISOString()});
+    if(name==='claim_game_reward'){if(receipts.has(body.p_request_id))return reply({...receipts.get(body.p_request_id),already_claimed:true});assert(now>=nextClaim,'client sent a new gift during the shared wait');nextClaim=now+DAY;const receipt={request_id:body.p_request_id,claimed_at:new Date(now).toISOString(),next_claim_at:new Date(nextClaim).toISOString()};receipts.set(body.p_request_id,receipt);if(dropReceipt){dropReceipt=false;return reply({message:'Response lost'},503);}return reply(receipt);}
+    if(name==='record_game_result'){if(!allowPoints)return reply({code:'PGRST202'},404);pointWrites++;points+=40;return reply({points_awarded:40,total_points:points,already_recorded:false});}
+    if(name==='get_game_leaderboard')return reply([me(),friend]);return reply({});
+   }
+   if(url.includes('/game_profiles'))return reply(url.includes('id=eq.')?me():[me(),friend]);
+   if(url.includes('/profiles'))return reply(url.includes('id=eq.')?null:[{...friend,avatar_url:'https://images.test/uploaded.jpg'}]);return reply([]);
+  };
+ }});
+ const w=dom.window,d=w.document,button=t=>[...d.querySelectorAll('button')].find(x=>x.textContent.trim()===t),nav=t=>[...d.querySelectorAll('nav button')].find(x=>x.querySelector('b').textContent===t),coins=()=>JSON.parse(w.localStorage.getItem('egg-2d-progress-v1')).points;
+ async function until(fn){for(let i=0;i<180;i++){if(fn())return;await wait(20);}throw new Error('Account gifts/points UI timed out: '+d.body.textContent.slice(-800));}
+ try{w.eval(fs.readFileSync('dist/game.js','utf8'));await until(()=>button('Collect 100 coins'));
+  if(missing){await until(()=>d.body.textContent.includes('server update 016'));assert(button('Collect 100 coins').disabled);assert(button('Open starter gift').disabled);assert.equal(coins(),150);return;}
+  await until(()=>d.querySelector('.ranking-balance').textContent.includes('waiting to sync')&&!button('Retry points sync').disabled);
+  allowPoints=true;button('Retry points sync').click();await until(()=>d.querySelector('.ranking-balance').textContent.includes('140 points'));assert.equal(pointWrites,1);assert.equal(JSON.parse(w.localStorage.getItem('egg-pending-results-'+a)).length,0);
+  nav('Rankings').click();await until(()=>d.querySelectorAll('.ranking-row').length===2);const photo=[...d.querySelectorAll('.ranking-row')].find(r=>r.textContent.includes('Friend')).querySelector('img');assert(photo.src.endsWith('stale.jpg'));photo.dispatchEvent(new w.Event('error'));assert(photo.src.endsWith('uploaded.jpg'),'a stale upload hid the saved legacy photo');assert(d.querySelector('.points-guide').textContent.includes('Hard: 40–200'));
+  nav('Home').click();await until(()=>button('Collect 100 coins')&&!button('Collect 100 coins').disabled);button('Collect 100 coins').click();button('Collect 100 coins').click();await until(()=>button('Retry saved gift')&&!button('Retry saved gift').disabled);assert.equal(receipts.size,1);assert.equal(coins(),150,'unconfirmed receipt granted coins');
+  button('Retry saved gift').click();await until(()=>coins()===250);assert.equal(receipts.size,1);assert.equal(JSON.parse(w.localStorage.getItem('egg-2d-progress-v1')).rewardClaimIds.length,1);assert(button('Open starter gift').disabled);assert(d.querySelector('.claim-cooldown').textContent.includes('24h'));
+  now=nextClaim-1;w.dispatchEvent(new w.Event('focus'));await wait(100);assert(button('Open starter gift').disabled);
+  now=nextClaim;w.dispatchEvent(new w.Event('focus'));await until(()=>!button('Open starter gift').disabled);button('Open starter gift').click();await until(()=>coins()===750);assert.equal(receipts.size,2);assert(button('Collect 150 coins').disabled,'another gift bypassed the new shared wait');
+  assert.equal(errors.length,0,errors.join('\n'));
+ }finally{w.close();}
+}
+await run();await run(true);console.log('PASS: real app UI retries queued ranking points, shows account totals/rules, recovers an uploaded-photo alternate, recovers a lost gift receipt exactly once, blocks all other claims until 24 hours, and disables account gifts honestly when server update 016 is missing.');

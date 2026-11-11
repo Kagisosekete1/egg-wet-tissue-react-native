@@ -1,5 +1,5 @@
 import {uuid,rewindGame} from './rules.js';
-export const canAdRewind=game=>!!game&&game.history.length>0&&game.rewardsUsed<1&&['ready','spraying'].includes(game.phase)&&(game.mode==='friend'||game.current===1);
+export const canAdRewind=game=>!!game&&game.history.length>0&&game.rewardsUsed<1&&game.phase==='over'&&(game.mode==='friend'||game.current===1);
 export function applyAdRewind(game,receipt,expectedRequest){if(!canAdRewind(game)||receipt?.status!=='earned'||receipt.gameId!==game.gameId||receipt.requestId!==expectedRequest)return game;return rewindGame(game);}
 /** Uses the trusted Android bridge. Browser AdMob adverts are not simulated. */
 export function requestRewardedAd({gameId,onStatus=()=>{},target=window}){

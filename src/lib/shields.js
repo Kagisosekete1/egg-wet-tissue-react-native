@@ -1,9 +1,9 @@
 import { supabase } from './supabase';
 
 export const SHIELD_CATALOG = [
-  { type: 'basic', name: 'Basic Shield', price: 5000, hits: 1, icon: '🛡️', tone: '#69c9ff', description: 'Blocks one fall or hit.' },
+  { type: 'basic', name: 'Bubble Shield', price: 5000, hits: 1, icon: '🛡️', tone: '#69c9ff', description: 'Blocks one fall or hit.' },
   { type: 'golden', name: 'Golden Shield', price: 10000, hits: 2, icon: '✨', tone: '#ffd34f', description: 'Golden protection for two hits.' },
-  { type: 'super', name: 'Super Shield', price: 20000, hits: 3, icon: '💎', tone: '#c38aff', description: 'A strong force field for three hits.' },
+  { type: 'super', name: 'Rainbow Shield', price: 20000, hits: 3, icon: '💎', tone: '#c38aff', description: 'A strong force field for three hits.' },
 ];
 
 export async function loadShieldInventory(userId) {

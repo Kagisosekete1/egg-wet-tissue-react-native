@@ -43,7 +43,7 @@ try{
  assert.equal(d.querySelector('.scene-window'),scene,'turn update replaced the scene window');
  assert.equal(d.querySelector('.scene-window svg'),svg,'turn update replaced the playing picture');
  assert.equal(svg.getAttribute('viewBox'),viewBox);
- assert(d.querySelector('.play-panel').contains(d.querySelector('.watch-ad-card')),'ad feedback can resize the whole scene');
+ assert(!d.querySelector('.watch-ad-card'),'advert appeared during an active round');
  assert(!d.querySelector('.play-panel').contains(scene));
  d.querySelector('[aria-label="Ask the Egg Coach"]').click();await until(()=>d.querySelector('.coach-situation'));
  assert(d.querySelector('.coach-situation').textContent.includes('3 sprays remaining'));
@@ -64,6 +64,8 @@ try{
  button('Roll die').click();await until(()=>button('Spray ×6'));
  for(let n=6;n>=3;n--){button('Spray ×'+n).click();await wait(25);}
  await until(()=>d.querySelector('.result-score'));
+ assert.equal(JSON.parse(w.localStorage.getItem('egg-2d-progress-v1')).points,150);
+ button('End round').click();await until(()=>d.querySelector('.result-score>span').textContent==='COINS DEDUCTED');
  assert.equal(d.querySelector('.result-score>span').textContent,'COINS DEDUCTED');
  assert.equal(d.querySelector('.result-score>b').textContent,'-80');
  assert(!d.querySelector('.reward-receipt'),'loss displayed bonus winnings');

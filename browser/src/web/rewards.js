@@ -1,17 +1,18 @@
+import {giftCooldown,markGiftClaim,CLAIM_WAIT_MS} from './gift-cooldown.js';
 export function dayKey(date=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Johannesburg',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
 const ordinal=key=>Date.parse(key+'T00:00:00Z')/86400000;
 export const GIFT_DAYS=[{coins:100},{coins:150},{coins:200},{coins:250,boost:true},{coins:300},{coins:400},{coins:600,shield:true}];
 export function dailyGift(progress,date=new Date()){
- const key=dayKey(date),last=progress.gifts?.lastDate,claimed=!!last&&key<=last,consecutive=last&&ordinal(key)-ordinal(last)===1;
+ const key=dayKey(date),last=progress.gifts?.lastDate,lastAt=Number(progress.gifts?.lastClaimAt)||0,elapsed=date.getTime()-lastAt,claimed=(!!last&&key<=last)||(lastAt>0&&elapsed<CLAIM_WAIT_MS),consecutive=lastAt?elapsed>=CLAIM_WAIT_MS&&elapsed<CLAIM_WAIT_MS*2:last&&ordinal(key)-ordinal(last)===1;
  const streak=claimed?(progress.gifts?.streak||1):consecutive?(progress.gifts?.streak||0)+1:1,day=(streak-1)%7+1;
  return {key,claimed,day,streak,...GIFT_DAYS[day-1]};
 }
 function addPrize(progress,{coins=0,xp=0,boost=false,shield=false},id){return {...progress,points:Math.max(0,progress.points+coins),xp:progress.xp+xp,inventory:boost?{...progress.inventory,emergency_stabilizer:(progress.inventory?.emergency_stabilizer||0)+1}:progress.inventory,shields:shield?[...(progress.shields||[]),{id,type:'basic',hits:1,equipped:false}]:progress.shields};}
-export function claimDailyGift(progress,date=new Date()){const gift=dailyGift(progress,date);if(gift.claimed)return progress;return {...addPrize(progress,gift,'daily-'+gift.key),gifts:{lastDate:gift.key,streak:gift.streak}};}
-export function claimWelcome(progress){if(progress.welcomeClaimed)return progress;return {...addPrize(progress,{coins:500,boost:true,shield:true},'welcome-shield'),welcomeClaimed:true};}
+export function claimDailyGift(progress,date=new Date(),actor='guest'){const gift=dailyGift(progress,date);if(gift.claimed||giftCooldown(progress,date,actor).remaining)return progress;return markGiftClaim({...addPrize(progress,gift,'daily-'+gift.key),gifts:{lastDate:gift.key,lastClaimAt:date.getTime(),streak:gift.streak}},date,actor);}
+export function claimWelcome(progress,date=new Date(),actor='guest'){if(progress.welcomeClaimed||giftCooldown(progress,date,actor).remaining)return progress;return markGiftClaim({...addPrize(progress,{coins:500,boost:true,shield:true},'welcome-shield'),welcomeClaimed:true},date,actor);}
 export const MILESTONES=[{id:'first-win',title:'A star is hatched',detail:'Win your first computer round.',metric:'wins',target:1,coins:200,xp:40},{id:'five-games',title:'Splash regular',detail:'Finish five computer rounds.',metric:'games',target:5,coins:300,xp:60,boost:true},{id:'garden-cup',title:'World explorer',detail:'Clear six adventure levels.',metric:'levels',target:6,coins:500,xp:100,shield:true},{id:'ten-wins',title:'Egg guardian',detail:'Win ten computer rounds.',metric:'wins',target:10,coins:800,xp:150,boost:true}];
 export function milestones(progress){return MILESTONES.map(m=>({...m,value:m.metric==='levels'?Object.keys(progress.levels).length:progress[m.metric]||0,claimed:(progress.milestones||[]).includes(m.id)}));}
-export function claimMilestone(progress,id){const m=milestones(progress).find(m=>m.id===id);if(!m||m.claimed||m.value<m.target)return progress;return {...addPrize(progress,m,'milestone-'+m.id),milestones:[...(progress.milestones||[]),id]};}
+export function claimMilestone(progress,id,date=new Date(),actor='guest'){const m=milestones(progress).find(m=>m.id===id);if(!m||m.claimed||m.value<m.target||giftCooldown(progress,date,actor).remaining)return progress;return markGiftClaim({...addPrize(progress,m,'milestone-'+m.id),milestones:[...(progress.milestones||[]),id]},date,actor);}
 export const LOSS_PENALTIES={easy:40,normal:60,hard:80};
 export const formatCoins=value=>{const n=Number(value)||0;return `${n>0?'+':''}${n}`;};
 export function roundReward(progress,game,{firstClear=false,levelId=null,worldClear=false}={}){
