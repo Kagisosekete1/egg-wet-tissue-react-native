@@ -76,3 +76,5 @@ For the existing Supabase project, run `supabase/migrations/006_symmetric_result
 The browser shows coin rewards separately from account ranking points. Gift coins are local currency. Server-confirmed ranking points follow `(20 + min(60, safe sprays × 2) + min(20, rounds × 2)) × difficulty`, rounded down; multipliers are Easy 1, Normal 1.5, Hard 2. Online stakes are settled separately by the battle server.
 
 `npm test --prefix tools/sql-tests` checks scoring, duplicate protection, loss floors and public-photo privacy using local test accounts and a local database.
+
+For the shared gift rule, also apply `supabase/migrations/016_shared_reward_cooldown.sql`. It enforces one successful collection per account every 24 hours across all gift kinds and devices, using server time and private claim history. Duplicate request IDs are safe to retry. Signed-in gift buttons stay unavailable until this update is present; guest gift timing is local to the device. Adventure coin rewards remain device-local.
