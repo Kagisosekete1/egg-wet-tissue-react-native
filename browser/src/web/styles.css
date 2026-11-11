@@ -65,3 +65,7 @@ html[data-visual="light"] .splash-fan-drop:nth-child(n+7){display:none}
 
 .pulse-even .pressing-finger,.pulse-even .pressing-pump{animation-name:gentle-pump-even}.sprayer-recoil.pulse-even{animation-name:grip-recoil-even}
 @keyframes gentle-pump-even{0%,100%{transform:translateY(0)}25%,50%{transform:translateY(5px)}}@keyframes grip-recoil-even{35%{transform:translate(1px,2px) rotate(-.6deg)}to{transform:translate(0,0) rotate(0)}}
+
+/* Compact in-match tools leave more room for the scene and main controls. */
+.control-deck .tools-label{font-size:10px;margin-top:0}.control-deck .tools-label small{font-size:8px;margin-top:2px}
+.control-deck .tool-tray{gap:5px;padding:2px 0 3px;align-items:stretch}.control-deck .tool-button{flex:0 0 60px;min-height:60px;padding:4px 3px;gap:2px;border-radius:10px;text-align:center}.control-deck .tool-button .game-icon{width:18px;height:18px;flex-shrink:0}.control-deck .tool-button b{width:100%;min-height:20px;display:flex;align-items:center;justify-content:center;font-size:9px;line-height:10px}.control-deck .tool-button small{font-size:8px;line-height:10px;white-space:nowrap}
