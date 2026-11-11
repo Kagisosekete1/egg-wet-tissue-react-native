@@ -104,3 +104,12 @@ Active matches use a stable gameplay camera that fits the egg, tissue, sprayer a
 Level retries are labelled Retry Level and restart the same level. Unfinished cups also offer Continue Level, preserving round wins. The Account Ranking Points balance is a real button. Its information icon opens a rounded dialog with the account score and How ranking points grow; Escape, Got it and the close control restore focus.
 
 The framing regression projects the mounted SVG's gameplay/landing coordinates into six window shapes, checks pause-aware impacts and verifies a real level retry. Representative idle/landed SVG renders were checked offline; a physical Samsung browser remains unverified.
+
+
+### Tablet playing area
+
+Landscape viewports at least 600 pixels wide use a wide two-column match: the egg scene on the left, controls on the right. Portrait keeps the mobile layout. Both computer/pass-and-play and online scenes keep the complete floor and landing in their camera. The install manifest allows rotation.
+
+Viewport heights fall back to 100vh and, on browsers without svh support, a measured window height updated on rotation/resize. Unsupported modern viewport units and clamp functions stay inside @supports blocks. Modern phones retain stable small-viewport framing during play. The measured fallback and scroll lock are removed when leaving a match.
+
+Automated tablet-size app sessions cover play, rotate, pause, resume and exit with modern and older-browser capability fixtures. Pixel layout on a physical tablet remains unverified because this environment has no browser-control tool.

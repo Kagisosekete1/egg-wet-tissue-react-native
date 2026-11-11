@@ -1,5 +1,5 @@
 import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
-const manifest=JSON.parse(fs.readFileSync('dist/manifest.webmanifest','utf8'));assert.equal(manifest.display,'standalone');assert.equal(manifest.scope,'./');assert.equal(manifest.orientation,'portrait');assert.equal(manifest.start_url,'./#/home');
+const manifest=JSON.parse(fs.readFileSync('dist/manifest.webmanifest','utf8'));assert.equal(manifest.display,'standalone');assert.equal(manifest.scope,'./');assert.equal(manifest.orientation,'any');assert.equal(manifest.start_url,'./#/home');
 for(const icon of manifest.icons){const bytes=fs.readFileSync('dist/'+icon.src.replace(/^\.\//,''));assert.equal(bytes.toString('hex',1,4),'504e47');const size=Number(icon.sizes.split('x')[0]);assert.equal(bytes.readUInt32BE(16),size);assert.equal(bytes.readUInt32BE(20),size);}
 const html=fs.readFileSync('dist/index.html','utf8');assert(html.includes('apple-touch-icon'));
 const base=process.env.EGG_TEST_BASE||'/',origin='https://egg.test'+base.replace(/\/$/,''),normalize=value=>new URL(typeof value==='string'?value:value.url,origin+'/').href;
