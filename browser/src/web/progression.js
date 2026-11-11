@@ -25,7 +25,7 @@ export function isLevelUnlocked(progress,id){return Number.isSafeInteger(id)&&id
 export function recordRound(progress,game,{levelId=null,seriesComplete=true,seriesWon=false,date=new Date()}={}){
  if(game.phase!=='over'||progress.history.some(h=>h.id===game.gameId)||game.mode!=='computer')return progress;
  const win=game.current===2,score=roundPoints(game,win),key=todayKey(date),daily=progress.daily[key]||{games:0,wins:0,sprays:0,claimed:[]};
- const levels={...progress.levels};if(levelId&&isLevelUnlocked(progress,levelId)&&((game.gameMode==='tour'&&seriesComplete&&seriesWon)||(game.gameMode!=='tour'&&win))){levels[levelId]=Math.max(levels[levelId]||0,1+(game.safeSprays>=4?1:0)+(game.safeSprays>=8?1:0));}
+ const levels={...progress.levels};if(win&&levelId&&isLevelUnlocked(progress,levelId)&&((game.gameMode==='tour'&&seriesComplete&&seriesWon)||(game.gameMode!=='tour'&&win))){levels[levelId]=Math.max(levels[levelId]||0,1+(game.safeSprays>=4?1:0)+(game.safeSprays>=8?1:0));}
  const firstClear=!!levelId&&!progress.levels[levelId]&&!!levels[levelId],prize=roundReward(progress,game,{firstClear,levelId,worldClear:firstClear&&levelId%6===0});
  const rewarded=grantRoundPrize(progress,prize,game.gameId);
  return {...rewarded,winStreak:prize.streak,wins:progress.wins+(win?1:0),games:progress.games+1,safeSprays:progress.safeSprays+game.safeSprays,levels,history:[{id:game.gameId,win,score,earned:prize.coins,prize,stars:levelId?levels[levelId]||0:0,mode:game.gameMode,difficulty:game.difficulty,date:date.toISOString(),levelId},...progress.history].slice(0,30),daily:{[key]:{...daily,games:daily.games+1,wins:daily.wins+(win?1:0),sprays:daily.sprays+game.safeSprays}}};
