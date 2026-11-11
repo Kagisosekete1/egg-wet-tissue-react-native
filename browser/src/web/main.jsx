@@ -9,7 +9,7 @@ import Match from './Match';
 import {gameAudio} from './audio';
 import Portal from './Portal';
 import {read,write} from './play-ui';
-import {levelAt,loadProgress,recordRound,isLevelUnlocked,SHIELDS} from './progression';
+import {levelAt,loadProgress,recordRound,isLevelUnlocked,unlockedLevel,SHIELDS} from './progression';
 import {POWERUP_CATALOG,uuid} from './rules';
 import './styles.css';
 const KEY='egg-2d-progress-v1';
@@ -51,10 +51,11 @@ function App(){
  function equip(id){const p=progressRef.current;updateProgress({...p,shields:(p.shields||[]).map(s=>({...s,equipped:s.id===id&&s.hits>0}))});}
  const toggleAudio=()=>setAudioOn(v=>{write('egg-2d-sound',v?'0':'1');gameAudio.setEnabled(!v);gameAudio.unlock();return !v;});
  const toggleMusic=()=>setMusicOn(v=>{write('egg-2d-music',v?'0':'1');gameAudio.setMusicEnabled(!v);gameAudio.unlock();return !v;});
+ const playerLevel=levelAt(unlockedLevel(progress));
  const levelId=Number(route.params.get('level')),level=levelAt(levelId),validLevel=level&&isLevelUnlocked(progress,level.id)?level:null;
  const matchSettings=validLevel?{mode:'computer',difficulty:validLevel.difficulty,gameMode:validLevel.gameMode}:{mode:route.params.get('mode')==='friend'?'friend':'computer',difficulty:['easy','normal','hard'].includes(route.params.get('difficulty'))?route.params.get('difficulty'):'normal',gameMode:['classic','sudden','chaos','tour'].includes(route.params.get('gameMode'))?route.params.get('gameMode'):'classic'};
- if(route.path==='play'&&(!levelId||validLevel))return <Match motionOn={motionOn} onToggleMotion={toggleMotion} key={location.hash} settings={matchSettings} level={validLevel} onExit={()=>navigate(validLevel?'levels':'home')} onRound={onRound} onNext={()=>launch(levelAt(validLevel.id+1))} audioOn={audioOn} musicOn={musicOn} onToggleMusic={toggleMusic} onToggleAudio={toggleAudio} best={best} coins={progress.points} rankingResult={rankingRound} countryCode={account.profile.country_code} playerName={account.profile.username||progress.playerName} inventory={progress.inventory||{}} consumeBoost={consumeBoost} shield={(progress.shields||[]).find(s=>s.equipped&&s.hits>0)} shields={progress.shields||[]} consumeShield={consumeShield}/>;
- if(route.path.startsWith('battle/'))return <OnlineBattle key={route.path} id={route.path.split('/')[1]} onExit={()=>navigate('online')}/>;
+ if(route.path==='play'&&(!levelId||validLevel))return <Match motionOn={motionOn} onToggleMotion={toggleMotion} key={location.hash} settings={matchSettings} level={validLevel} playerLevel={playerLevel} onExit={()=>navigate(validLevel?'levels':'home')} onRound={onRound} onNext={()=>launch(levelAt(validLevel.id+1))} audioOn={audioOn} musicOn={musicOn} onToggleMusic={toggleMusic} onToggleAudio={toggleAudio} best={best} coins={progress.points} rankingResult={rankingRound} countryCode={account.profile.country_code} playerName={account.profile.username||progress.playerName} inventory={progress.inventory||{}} consumeBoost={consumeBoost} shield={(progress.shields||[]).find(s=>s.equipped&&s.hits>0)} shields={progress.shields||[]} consumeShield={consumeShield}/>;
+ if(route.path.startsWith('battle/'))return <OnlineBattle key={route.path} id={route.path.split('/')[1]} playerLevel={playerLevel} onExit={()=>navigate('online')}/>;
  const page=route.path.startsWith('legal/')?'legal':['home','setup','levels','challenges','shop','results','settings','leaderboard','notifications','online','coach'].includes(route.path)?route.path:'levels';
  return <Portal install={install} motionOn={motionOn} onToggleMotion={toggleMotion} legalSlug={route.path.split('/')[1]} calendarTick={calendarTick} claimStatus={giftClaims} claimGift={()=>giftClaims.claim('daily','gift-calendar')} claimWelcome={()=>giftClaims.claim('welcome','starter-gift')} claimMilestone={id=>giftClaims.claim('milestone',id)} visualMode={visualMode} changeVisual={changeVisual} pwa={pwa} key={page} page={page} navigate={navigate} progress={progress} settings={settings} setSettings={setSettings} launch={launch} audioOn={audioOn} musicOn={musicOn} onToggleMusic={toggleMusic} onToggleAudio={toggleAudio} claim={id=>giftClaims.claim('goal',id)} buy={buy} equip={equip} saveName={name=>updateProgress({...progressRef.current,playerName:name.trim().slice(0,24)||'Player'})} best={best}/>;
 }

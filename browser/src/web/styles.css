@@ -107,3 +107,8 @@ html[data-playing="on"],html[data-playing="on"] body{height:var(--play-viewport-
  .game-frame.match-screen>.hud,.game-frame.match-screen>.online-players{height:64px;max-height:64px}
  .game-frame.match-screen>.online-players{padding-top:4px;padding-bottom:4px}
 }
+
+/* This HUD label sits in the sky and never changes the scene or covers the landing floor. */
+.current-level-badge{position:absolute;top:8px;left:10px;z-index:2;max-width:calc(100% - 20px);display:flex;align-items:center;border:2px solid #70517f;border-radius:12px;background:#fff4dbee;padding:3px 8px;box-shadow:0 2px 0 #5a3d6940;color:#503464;pointer-events:none;white-space:nowrap}.current-level-badge strong{flex-shrink:0;font-family:'Baloo 2','Nunito',sans-serif;font-size:14px;line-height:18px}.current-level-badge.saved-level strong{font-size:12px}.current-level-badge>span{min-width:0;margin-left:7px;overflow:hidden;text-overflow:ellipsis;font-size:10px;line-height:18px;font-weight:800;color:#80668c}
+
+.ranking-banner{position:relative}.ranking-banner>.ranking-info-button{position:absolute;right:12px;top:12px}.ranking-info-modal .hall-of-fame-info{display:flex;flex-direction:column;gap:7px}.ranking-info-modal .hall-of-fame-info p{font-size:12px;line-height:1.5}

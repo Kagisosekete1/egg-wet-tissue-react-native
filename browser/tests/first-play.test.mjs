@@ -3,11 +3,11 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const bundle=fs.readFileSync('dist/game.js','utf8'),wait=ms=>new Promise(r=>setTimeout(r,ms));
-function gameDom({seen=false,query='mode=friend&difficulty=normal&gameMode=classic',coins=150,random=.5}={}){
+function gameDom({seen=false,query='mode=friend&difficulty=normal&gameMode=classic',coins=150,random=.5,levels={}}={}){
  const errors=[],vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.message));
  const dom=new JSDOM('<!doctype html><div id="root"></div>',{url:'https://egg.test/motion?motion=on#/play?'+query,pretendToBeVisual:true,runScripts:'dangerously',virtualConsole:vc,beforeParse(w){
   if(seen)w.localStorage.setItem('egg-first-play-seen','1');
-  w.localStorage.setItem('egg-2d-progress-v1',JSON.stringify({version:1,points:coins}));
+  w.localStorage.setItem('egg-2d-progress-v1',JSON.stringify({version:1,points:coins,levels}));
   w.Headers=Headers;w.Request=Request;w.Response=Response;w.fetch=async()=>new Response('[]');w.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}});w.Math.random=()=>random;
   w.Audio=class{play(){return Promise.resolve();}pause(){}load(){}addEventListener(){}removeAttribute(){}};
  }});
@@ -73,3 +73,6 @@ try{
  assert.equal(loss.errors.length,0,loss.errors.join('\n'));
  console.log('PASS: a real hard-mode loss renders -80 coins, stores the deducted balance, awards no bonus receipt and skips onboarding for returning players.');
 }finally{loss.w.close();}
+
+const levelDisplay=gameDom({seen:true,levels:Object.fromEntries(Array.from({length:12},(_,i)=>[i+1,1]))});
+try{const {d,w,button}=levelDisplay;await until(()=>d.querySelector('.current-level-badge'));assert.equal(d.querySelector('.current-level-badge strong').textContent,'Adventure Level 13');const scene=d.querySelector('.scene-window svg');button('Roll die').click();await until(()=>button('Spray ×4'));button('Spray ×4').click();await until(()=>button('Spray ×3'));assert.equal(d.querySelector('.current-level-badge strong').textContent,'Adventure Level 13');assert.equal(d.querySelector('.scene-window svg'),scene);w.location.hash='/play?level=2';await until(()=>d.querySelector('.current-level-badge strong')?.textContent==='Level 2');assert(d.querySelector('.current-level-badge').textContent.includes('Garden Lab'));assert(d.querySelector('#crash-floor'));assert.equal(JSON.parse(w.localStorage.getItem('egg-2d-progress-v1')).levels[12],1);assert.equal(levelDisplay.errors.length,0,levelDisplay.errors.join('\n'));console.log('PASS: quick play shows saved adventure level 13 during turns; replaying level 2 shows the active level and world, without changing saved progress or replacing the scene during sprays.');}finally{levelDisplay.w.close();}
