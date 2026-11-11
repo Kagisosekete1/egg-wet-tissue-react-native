@@ -95,3 +95,12 @@ Every manual gift/mission claim starts one shared 24-hour wait. Accounts require
 Watch Ad appears only on a human loss result. An earned Android advert repairs up to the last four sprays and resumes the existing die, once per round. The result stays provisional until the player ends the round, restarts or leaves; a successful revive cancels the provisional result. Chrome reports that the Android advert is unavailable.
 
 AI answers remain pending at the owner's request. Automated gameplay, UI/outbox/cooldown and local SQL checks are available; physical-device/browser visual QA is still outstanding.
+
+
+### Visible crash floor and ranking information
+
+Active matches use a stable gameplay camera that fits the egg, tissue, sprayer and floor without cropping the landing. The sky, hills and floor extend beyond that camera so wider scene windows stay filled without stretching the characters. The lower controls reserve less height; their own scroll area handles overflow. Home artwork retains its decorative framing.
+
+Level retries are labelled Retry Level and restart the same level. Unfinished cups also offer Continue Level, preserving round wins. The Account Ranking Points balance is a real button. Its information icon opens a rounded dialog with the account score and How ranking points grow; Escape, Got it and the close control restore focus.
+
+The framing regression projects the mounted SVG's gameplay/landing coordinates into six window shapes, checks pause-aware impacts and verifies a real level retry. Representative idle/landed SVG renders were checked offline; a physical Samsung browser remains unverified.

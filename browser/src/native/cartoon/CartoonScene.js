@@ -15,7 +15,7 @@ import {Scheduler} from '../../web/scheduler';
 const emotion=r=>r>=.8?4:r>=.5?3:r>=.25?2:r>=.06?1:0;
 const nozzle=sprayerNozzle(5);
 /** Only gameplay events render React. Browser transforms animate each short effect. */
-export default function CartoonScene({worldIndex=0,danger=0,sprayToken=0,sprayReady=false,falling=false,fallVariant='wobble',resetToken=0,paused=false,onImpact}){
+export default function CartoonScene({worldIndex=0,danger=0,sprayToken=0,sprayReady=false,falling=false,fallVariant='wobble',resetToken=0,paused=false,onImpact,framing='decorative'}){
  const sceneRef=useRef(null);
  useSceneryMotion(sceneRef,paused);
  const [visibleSpray,setVisibleSpray]=useState(0),[landed,setLanded]=useState(false),[foreground,setForeground]=useState(!document.hidden);
@@ -28,12 +28,12 @@ export default function CartoonScene({worldIndex=0,danger=0,sprayToken=0,sprayRe
  useEffect(()=>{setLanded(false);if(!falling)return;return scheduler.schedule(900,()=>{setLanded(true);callback.current?.();});},[falling,resetToken,scheduler]);
  useEffect(()=>()=>scheduler.clear(),[scheduler]);
  const world=useMemo(()=>worldAt(worldIndex),[worldIndex]),ratio=Math.max(0,Math.min(1,danger)),sag=ratio*100,spray=visibleSpray!==0,eggY=760+sag*.5;
- return <View className={`cartoon-scene ${paused||!foreground?'scene-paused':''}`} style={{flex:1,backgroundColor:'#91e1e7'}} accessible accessibilityLabel={`Cartoon egg ${falling?'has fallen':ratio>.8?'looks frightened':'balances on the tissue'}`}><Svg ref={sceneRef} width="100%" height="100%" viewBox="0 0 1080 1300" preserveAspectRatio="xMidYMid slice"><Defs>
- <LinearGradient id="sky" x2="0" y2="1"><Stop stopColor={world.sky[0]}/><Stop offset="1" stopColor={world.sky[1]}/></LinearGradient>
+ return <View className={`cartoon-scene ${paused||!foreground?'scene-paused':''}`} style={{flex:1,backgroundColor:'#91e1e7'}} accessible accessibilityLabel={`Cartoon egg ${falling?'has fallen':ratio>.8?'looks frightened':'balances on the tissue'}`}><Svg ref={sceneRef} width="100%" height="100%" viewBox={framing==='gameplay'?'0 250 1080 1000':'0 0 1080 1300'} preserveAspectRatio={framing==='gameplay'?'xMidYMid meet':'xMidYMid slice'} data-framing={framing}><Defs>
+ <LinearGradient id="sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="1300"><Stop stopColor={world.sky[0]}/><Stop offset="1" stopColor={world.sky[1]}/></LinearGradient>
  <LinearGradient id="shell" x2="1" y2="1"><Stop stopColor="#fffdf1"/><Stop offset=".55" stopColor="#ffecc0"/><Stop offset="1" stopColor="#efa665"/></LinearGradient>
  <LinearGradient id="bottle" x2="1" y2="1"><Stop stopColor="#ff98bd"/><Stop offset="1" stopColor="#dc4d94"/></LinearGradient>
  <LinearGradient id="leaf" x2="1" y2="1"><Stop stopColor={world.leaf[0]}/><Stop offset="1" stopColor={world.leaf[1]}/></LinearGradient>
- <LinearGradient id="table" x2="0" y2="1"><Stop stopColor={world.table[0]}/><Stop offset="1" stopColor={world.table[1]}/></LinearGradient>
+ <LinearGradient id="table" gradientUnits="userSpaceOnUse" x1="0" y1="1090" x2="0" y2="1300"><Stop stopColor={world.table[0]}/><Stop offset="1" stopColor={world.table[1]}/></LinearGradient>
  <LinearGradient id="wet-tissue" x2="0" y2="1"><Stop stopColor="#a3f0f5"/><Stop offset="1" stopColor="#53bedc"/></LinearGradient>
  <ClipPath id="tissue-clip"><Path d={tissueShape(sag)}/></ClipPath></Defs>
  <Landscape world={world}/>
