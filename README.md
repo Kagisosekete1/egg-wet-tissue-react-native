@@ -67,3 +67,12 @@ Backend deployment is still required on the existing Supabase project `glnkdakwk
 The normal PWA is online-first: `app-sw.js` supports installation without caching a stale game shell or songs. Offline work is deferred. Native notification and rewarded-ad SDK changes require a new Android binary; publishing the web game alone cannot update those SDKs.
 
 Validation for this update: browser gameplay and signed-in UI fixtures pass; the online migration tests use embedded PostgreSQL to exercise ownership, private inbox RLS, stakes, counters, shield durability, idempotency and a single winner payout. Run `npm ci` and `npm test` in `browser/`; run `npm ci` in `tools/sql-tests/`, then `npm run test:online-db` and `npm run test:inbox` from the root. Android JavaScript export passes. The existing native project still has 52 TypeScript errors and one GameScreen lint error; this update introduces no additional native errors. Physical Samsung A05 and two-device push checks remain necessary after backend deployment/new signed Android build.
+
+
+### Ranking points and uploaded photos
+
+For the existing Supabase project, run `supabase/migrations/006_symmetric_result_points.sql` and then `supabase/migrations/015_ranking_profile_photos.sql` in the SQL Editor. These are prepared source changes; this chat has not deployed them. Migration 006 records each signed-in round once, adds points for wins and subtracts for losses down to zero. Migration 015 uses the existing public leaderboard RPC to recover legacy uploaded profile photos without granting public access to private profile data. Neither script resets balances.
+
+The browser shows coin rewards separately from account ranking points. Gift coins are local currency. Server-confirmed ranking points follow `(20 + min(60, safe sprays × 2) + min(20, rounds × 2)) × difficulty`, rounded down; multipliers are Easy 1, Normal 1.5, Hard 2. Online stakes are settled separately by the battle server.
+
+`npm test --prefix tools/sql-tests` checks scoring, duplicate protection, loss floors and public-photo privacy using local test accounts and a local database.

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node online-battle.test.mjs"
+    "test": "node online-battle.test.mjs && node ranking-photos.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.16"
