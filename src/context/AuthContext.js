@@ -1,3 +1,4 @@
+import {setInboxUser} from '../lib/inbox';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { OneSignal } from 'react-native-onesignal';
@@ -53,6 +54,7 @@ export function AuthProvider({ children }) {
     try {
       // Initialize before calling login/logout: provider effects can run before
       // the root layout's notification effect on a cold launch.
+      setInboxUser(session?.user?.id);
       initializeNotifications();
       if (session?.user?.id) OneSignal.login(session.user.id);
       else OneSignal.logout();

@@ -33,13 +33,13 @@ async function readPlayers(table) {
   return {rows,error:null};
 }
 export async function loadLeaderboard() {
-  const {data:ranked,error:rankError}=await supabase.rpc('get_game_leaderboard');
-  if(!rankError)return mergeProfiles(ranked||[],[]);
-  const [current, legacy] = await Promise.all([readPlayers('game_profiles'), readPlayers('profiles')]);
-  if (current.error && legacy.error) throw current.error;
-  const rows = mergeProfiles(current.rows, legacy.rows);
-  return rows;
+ const [rank,current,legacy]=await Promise.all([supabase.rpc('get_game_leaderboard'),readPlayers('game_profiles'),readPlayers('profiles')]);
+ if(rank.error&&current.error&&legacy.error)throw rank.error;
+ const photos=new Map(mergeProfiles(current.rows||[],legacy.rows||[]).map(p=>[p.id,p]));
+ const ranking=rank.error?mergeProfiles(current.rows||[],legacy.rows||[]):mergeProfiles(rank.data||[],[]);
+ return ranking.map(p=>({...p,avatar_url:photos.get(p.id)?.avatar_url||p.avatar_url}));
 }
+
 export async function ensureGameProfile(user) {
   if (!user?.id) return;
   const {data,error:readError} = await supabase.from('game_profiles').select('id').eq('id',user.id).maybeSingle();

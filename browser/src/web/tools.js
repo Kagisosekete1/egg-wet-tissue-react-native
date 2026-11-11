@@ -1,0 +1,5 @@
+import {canUsePowerup,applyPowerup} from './rules.js';
+import {useBoost,resolveCounter} from './turn-rules.js';
+const defense=new Set(['emergency_stabilizer','quick_escape']);
+export function toolReason(game,type,owned){if(!owned)return 'Buy this in the shop';if(game.mode==='computer'&&game.current!==1)return 'Wait for your turn';if(type==='lucky_roll')return 'One roll per turn';if(type==='counter_attack')return game.phase==='counter'&&game.pendingCounter?'':'Only for an incoming attack';if(!['ready','spraying'].includes(game.phase))return 'Wait for the die';if(!defense.has(type)&&game.phase!=='ready')return 'Use before you roll';return canUsePowerup({...game,phase:'ready'},type)?'':type==='emergency_stabilizer'?'Tissue is already strong':'Not needed right now';}
+export function usePlayerTool(game,type,owned){if(toolReason(game,type,owned))return game;if(type==='counter_attack')return resolveCounter(game,true);if(defense.has(type)&&game.phase==='spraying'){const next=applyPowerup({...game,phase:'ready'},type);return {...next,phase:'spraying'};}return useBoost(game,type);}

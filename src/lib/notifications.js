@@ -1,3 +1,4 @@
+import {saveInboxNotification} from './inbox';
 import { OneSignal } from 'react-native-onesignal';
 import { router } from 'expo-router';
 
@@ -23,7 +24,9 @@ export function initializeNotifications() {
   }
 
   try {
+    OneSignal.Notifications.addEventListener('foregroundWillDisplay',event=>{void saveInboxNotification(event.getNotification()).catch(()=>{});});
     OneSignal.Notifications.addEventListener('click', (event) => {
+      void saveInboxNotification(event?.notification).catch(()=>{});
       const data = event?.notification?.additionalData;
       if (data?.type === 'egg_challenge') router.push({ pathname: '/challenges', params: { challenge_id: data.challenge_id } });
       if (data?.type === 'egg_battle_turn' && data.battle_id) router.push({ pathname: '/battle', params: { id: data.battle_id } });

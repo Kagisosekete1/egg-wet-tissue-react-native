@@ -1,0 +1,11 @@
+{
+  "name": "egg-battle-sql-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node online-battle.test.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.16"
+  }
+}

@@ -1,7 +1,5 @@
 (()=>{
  const base=new URL('.',document.currentScript?.src||new URL('launch.js',document.baseURI).href).pathname;
- // Retire only this game's offline worker; keep saved progress and music.
- navigator.serviceWorker?.getRegistration(base).then(reg=>{if(reg&&new URL(reg.active?.scriptURL||reg.waiting?.scriptURL||'',location.href).pathname===base+'sw.js')return reg.unregister();}).catch(()=>{});
  const panel=document.getElementById('launch-status'),text=document.getElementById('launch-message'),root=document.getElementById('root');let started=false;
  function show(message){if(panel){panel.hidden=false;text.textContent=message;}}
  const check=()=>{if(root?.querySelector('.game-frame')){started=true;if(panel)panel.hidden=true;}else if(started)show('The game stopped. Refresh the saved game below to try again.');};

@@ -1,0 +1,5 @@
+import React,{memo} from 'react';
+import {G,Path} from 'react-native-svg';
+import {SPRAYER} from '../layout';
+function SprayerHand({pressing}){return <G id="sprayer-hand" transform={`translate(${SPRAYER.x} ${SPRAYER.y}) rotate(${SPRAYER.angle}) scale(${-SPRAYER.scale} ${SPRAYER.scale})`} stroke="#40264f" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"><Path d="M-36 102L-64 63Q-78 35-61 12L-24-28Q-8-36-3-21Q0-9-12 3L-21 17Q-7 0 4 11Q13 20 4 31Q17 17 29 29Q37 38 26 49Q41 39 50 52Q59 70 27 95L4 113Z" fill="#dfa16f"/><Path d="M-36 100L1 116 7 146-58 153-62 126Z" fill="#81d9cf"/><Path d="M-53 124L-4 139" stroke="#ccfff1" strokeWidth="5"/><G className={pressing?'pressing-finger':''}><Path d="M-50 27Q-71-12-53-50L-24-110Q-16-130-13-154L-11-198Q-9-218 8-216Q23-214 21-197L19-163Q16-139 5-113L-17-57" fill="#edb184"/><Path d="M-3-201L10-201Q14-190 5-187L-4-189Z" fill="#ffdfc2" strokeWidth="2"/></G><Path d="M-48 37L-33 50M-27 48L-14 61M-4 62L7 72" stroke="#b67c59" strokeWidth="3"/></G>;}
+export default memo(SprayerHand);

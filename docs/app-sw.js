@@ -1,0 +1,4 @@
+// Online-first install worker. Never traps the game behind a saved shell or caches music.
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
+self.addEventListener('fetch',event=>{if(event.request.mode!=='navigate')return;event.respondWith(fetch(event.request).catch(()=>new Response('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Egg & Tissue</title><body style="background:#fff5df;color:#39254f;font:18px system-ui;padding:32px"><h1>Your egg is waiting.</h1><p>This version needs an internet connection. Your saved progress is still on this phone.</p><button onclick="location.reload()" style="padding:16px">Try again</button>',{status:503,headers:{'Content-Type':'text/html; charset=utf-8'}})));});

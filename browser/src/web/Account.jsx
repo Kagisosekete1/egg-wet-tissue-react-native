@@ -3,6 +3,7 @@ import {supabase,nativeAction} from './services/client';
 import {loadProfile,ensureGameProfile,savePlayerProfile,syncPendingResults} from './services/profiles';
 import {read,write} from './play-ui';
 import countries from './countries.json';
+import {useLiveRefresh} from './useLiveRefresh';
 const Context=createContext(null);
 export const useAccount=()=>useContext(Context);
 export const countryName=code=>countries.find(c=>c.code===code)?.name||'Choose country';
@@ -10,15 +11,16 @@ export const flag=code=>/^[A-Z]{2}$/.test(code||'')?[...code].map(c=>String.from
 export function AccountProvider({children}){
  const [recovering,setRecovering]=useState(false),[session,setSession]=useState(null),[profile,setProfile]=useState(null),[loading,setLoading]=useState(true),[guest,setGuest]=useState(()=>{try{return JSON.parse(read('egg-guest-profile','{}'));}catch{return {};}});
  const user=session?.user;
- async function refresh(nextUser=user){if(!nextUser){setProfile(null);return;}await ensureGameProfile(nextUser);const row=await loadProfile(nextUser.id,nextUser);setProfile(row);}
+ async function refresh(nextUser=user){if(!nextUser){setProfile(null);return;}await ensureGameProfile(nextUser);const row=await loadProfile(nextUser.id,nextUser);setProfile(row);window.dispatchEvent(new Event('egg-account-updated'));}
  useEffect(()=>{let live=true;const timer=setTimeout(()=>{if(live)setLoading(false);},6000);const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,value)=>{if(live){if(_event==='PASSWORD_RECOVERY'){setRecovering(true);setTimeout(()=>{location.hash='/settings';},0);}setSession(value);setLoading(false);if(value?.access_token&&value?.refresh_token)nativeAction('SESSION',{access_token:value.access_token,refresh_token:value.refresh_token});}});supabase.auth.getSession().then(({data})=>{if(live){setSession(data.session);setLoading(false);}}).catch(()=>{if(live)setLoading(false);});
  // Native authentication stays in the app's existing secure storage.
  window.eggReceiveNativeSession=value=>{if(value?.access_token&&value?.refresh_token)supabase.auth.setSession(value).catch(()=>{});};nativeAction('READY');if(window.eggNativeSession)window.eggReceiveNativeSession(window.eggNativeSession);
  return()=>{live=false;clearTimeout(timer);subscription.unsubscribe();delete window.eggReceiveNativeSession;};},[]);
  useEffect(()=>{let live=true;setProfile(null);if(!user?.id)return;(async()=>{await syncPendingResults(user.id);await ensureGameProfile(user);const row=await loadProfile(user.id,user);if(live)setProfile(row);})().catch(()=>{});return()=>{live=false;};},[user?.id]);
+ useLiveRefresh(async()=>{if(user?.id)setProfile(await loadProfile(user.id,user));},{tables:['game_profiles','profiles'],filter:`id=eq.${user?.id}`,interval:10000,enabled:!!user?.id,key:'my-profile-'+user?.id});
  async function save(patch,file){let avatar=profile?.avatar_url||guest.avatar_url||null;if(file){if(file.size>5*1024*1024)throw new Error('Choose a photo smaller than 5 MB.');if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Choose a JPG, PNG or WebP photo.');if(user){const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg',path=`${user.id}/avatar-${Date.now()}.${ext}`;const {error}=await supabase.storage.from('game-avatars').upload(path,file,{contentType:file.type});if(error)throw error;avatar=supabase.storage.from('game-avatars').getPublicUrl(path).data.publicUrl;}else{avatar=await localPhoto(file);}}
  const data={...patch,avatar_url:avatar};if(user){await savePlayerProfile(user,data);await refresh();}else{write('egg-guest-profile',JSON.stringify(data));setGuest(data);}return data;}
- const identity=profile||{...guest,username:guest.username||user?.user_metadata?.username||user?.email?.split('@')[0],country_code:guest.country_code||user?.user_metadata?.country_code||''};
+ const identity=profile||(user?{username:user.user_metadata?.username||user.email?.split('@')[0],country_code:user.user_metadata?.country_code||'',avatar_url:user.user_metadata?.avatar_url||null}:guest);
  return <Context.Provider value={{session,user,profile:identity,loading,recovering,finishRecovery:()=>setRecovering(false),refresh,save,signOut:async()=>{const {error}=await supabase.auth.signOut();if(error)throw error;nativeAction('SIGN_OUT');},countries}}>{children}</Context.Provider>;
 }
 function localPhoto(file){return new Promise((resolve,reject)=>{const source=URL.createObjectURL(file),image=new Image();image.onload=()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=192;const ctx=canvas.getContext('2d'),side=Math.min(image.width,image.height);ctx.drawImage(image,(image.width-side)/2,(image.height-side)/2,side,side,0,0,192,192);URL.revokeObjectURL(source);resolve(canvas.toDataURL('image/jpeg',.8));};image.onerror=()=>{URL.revokeObjectURL(source);reject(new Error('This photo could not open.'));};image.src=source;});}

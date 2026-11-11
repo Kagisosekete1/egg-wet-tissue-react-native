@@ -1,8 +1,9 @@
+import {readInbox,subscribeInbox} from '../lib/inbox';
 import mobileAds,{RewardedAd,AdEventType,RewardedAdEventType,TestIds} from 'react-native-google-mobile-ads';
 import {USE_TEST_ADS} from '../lib/monetization';
 import {RewardedAdSession} from '../lib/rewardedAdSession';
 import React,{useCallback,useEffect,useRef,useState} from 'react';
-import {ActivityIndicator,BackHandler,Linking,Pressable,Text,View} from 'react-native';
+import {ActivityIndicator,BackHandler,Linking,Pressable,Text,View,Vibration} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {WebView} from 'react-native-webview';
 import {router} from 'expo-router';
@@ -17,10 +18,15 @@ export default function CartoonPortal(){
  useEffect(()=>{const subscription=BackHandler.addEventListener('hardwareBackPress',()=>{if(canGoBack){web.current?.goBack();return true;}return false;});return()=>subscription.remove();},[canGoBack]);
  useEffect(()=>()=>adSession.current?.destroy(),[]);
  function rewarded(){if(!adSession.current)adSession.current=new RewardedAdSession({initialize:()=>mobileAds().initialize(),createAd:()=>RewardedAd.createForAdRequest(USE_TEST_ADS?TestIds.REWARDED:'ca-app-pub-3333777272750017/5128419119'),events:{loaded:[AdEventType.LOADED,RewardedAdEventType.LOADED],earned:RewardedAdEventType.EARNED_REWARD,closed:AdEventType.CLOSED,error:AdEventType.ERROR},emit:value=>web.current?.injectJavaScript(`window.dispatchEvent(new CustomEvent('egg-rewarded-ad',{detail:${JSON.stringify(value)}}));true;`)});return adSession.current;}
+ const sendInbox=useCallback(items=>{web.current?.injectJavaScript(`window.dispatchEvent(new CustomEvent('egg-native-inbox',{detail:${JSON.stringify({userId:session?.user?.id,items})}}));true;`);},[session?.user?.id]);
+ useEffect(()=>subscribeInbox(sendInbox),[sendInbox]);
  async function message(event){if(!trusted(event.nativeEvent.url)||event.nativeEvent.data.length>20000)return;let data;try{data=JSON.parse(event.nativeEvent.data);}catch{return;}
   if(data.type==='WATCH_AD'&&typeof data.requestId==='string'&&data.requestId.length<=100&&typeof data.gameId==='string'&&/^[a-f0-9-]{36}$/i.test(data.gameId)){void rewarded().request({requestId:data.requestId,gameId:data.gameId});return;}
   if(data.type==='CANCEL_WATCH_AD'&&typeof data.requestId==='string'){adSession.current?.cancel(data.requestId);return;}
-  if(data.type==='READY'){syncSession();return;}
+  if(data.type==='READY'){syncSession();readInbox().then(sendInbox).catch(()=>{});return;}
+  if(data.type==='OPEN_WEBAPP'){Linking.openURL(HOST+'/motion#/home').catch(()=>{});return;}
+  if(data.type==='GET_INBOX'){readInbox().then(sendInbox).catch(()=>{});return;}
+  if(data.type==='VIBRATE'){const pattern=Array.isArray(data.pattern)?data.pattern.slice(0,10).map(n=>Math.max(0,Math.min(200,Number(n)||0))):Math.max(0,Math.min(200,Number(data.pattern)||0));if(data.pattern===0)Vibration.cancel();else Vibration.vibrate(Array.isArray(pattern)?[0,...pattern]:pattern);return;}
   if(data.type==='SESSION'&&typeof data.access_token==='string'&&typeof data.refresh_token==='string'&&data.access_token!==lastToken.current){lastToken.current=data.access_token;await supabase.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token}).catch(()=>{});return;}
   if(data.type==='SIGN_OUT'){lastToken.current='';await supabase.auth.signOut();return;}
   if(data.type==='CHALLENGES')router.push('/challenges');

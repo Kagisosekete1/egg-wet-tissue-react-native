@@ -48,7 +48,9 @@
     "typecheck": "tsc --noEmit",
     "test:shields": "node ./tools/test-shields.mjs",
     "test:powerups": "node ./tools/test-powerups.mjs",
-    "test:ads": "node ./tools/test-rewarded-ad-bridge.mjs"
+    "test:ads": "node ./tools/test-rewarded-ad-bridge.mjs",
+    "test:inbox": "node ./tools/test-inbox.mjs",
+    "test:online-db": "npm --prefix tools/sql-tests test"
   },
   "private": true,
   "devDependencies": {
