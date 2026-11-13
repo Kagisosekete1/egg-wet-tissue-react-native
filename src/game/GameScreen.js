@@ -107,28 +107,40 @@ export default function GameScreen(){
     const computerTurn=g.mode==='computer'&&g.current===2;
     if(computerTurn!==computerAction)return;
     if(!['spraying','countdown'].includes(g.phase)||g.sprayed>=g.roll)return;
-    let blocked=false;
-    const shield=shieldRef.current;
-    const humanCanBlock=g.current===1||(g.mode==='computer'&&g.current===2);
-    if(userId&&humanCanBlock&&shield?.remaining_hits>0&&nextSprayWouldFall(g)){
-      sprayBusy.current=true;setShieldProcessing(true);
-      try{
-        const consumed=await consumeShieldHit(shield.id,uuid());
-        if(consumed?.blocked){
-          blocked=true;
-          const nextShield=consumed.remaining_hits>0?{...shield,remaining_hits:consumed.remaining_hits,equipped:consumed.equipped!==false}:null;
-          shieldRef.current=nextShield;setEquippedShield(nextShield);
-          setShieldMessage(`${shield.shield_type[0].toUpperCase()+shield.shield_type.slice(1)} Shield blocked the fall${consumed.remaining_hits>0?` · ${consumed.remaining_hits} hit${consumed.remaining_hits===1?'':'s'} left`: ' · shield broken'}.`);
+    // Start the visible spray immediately. Shield validation may need a round trip,
+    // but it must never delay the hand, water, or spray sound.
+    sprayBusy.current=true;
+    setSprayToken(v=>v+1);
+    play('spray');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(()=>{});
+    try{
+      let blocked=false;
+      const shield=shieldRef.current;
+      const humanCanBlock=g.current===1||(g.mode==='computer'&&g.current===2);
+      if(userId&&humanCanBlock&&shield?.remaining_hits>0&&nextSprayWouldFall(g)){
+        setShieldProcessing(true);
+        try{
+          const consumed=await consumeShieldHit(shield.id,uuid());
+          if(consumed?.blocked){
+            blocked=true;
+            const nextShield=consumed.remaining_hits>0?{...shield,remaining_hits:consumed.remaining_hits,equipped:consumed.equipped!==false}:null;
+            shieldRef.current=nextShield;setEquippedShield(nextShield);
+            setShieldMessage(`${shield.shield_type[0].toUpperCase()+shield.shield_type.slice(1)} Shield blocked the fall${consumed.remaining_hits>0?` · ${consumed.remaining_hits} hit${consumed.remaining_hits===1?'':'s'} left`: ' · shield broken'}.`);
+          }
+        }catch{
+          setShieldMessage('Shield could not sync, so the normal game rules applied.');
         }
-      }catch{
-        setShieldMessage('Shield could not sync, so the normal game rules applied.');
-      }finally{sprayBusy.current=false;setShieldProcessing(false);}
-      if(gameRef.current!==g)return;
+        if(gameRef.current!==g)return;
+      }
+      const next=applySpray(g,blocked);
+      if(next!==g){if(next.phase==='over')next.fallVariant=['wobble','spin','bounce','dizzy','confetti'][Math.floor(Math.random()*5)];commit(next);if(next.phase==='over')play('scream');
+        const d=next.damage/next.threshold,m=d>.85?2:d>.55?1:0;const phrases=lines[m];setSpeech(next.lastShieldBlock?'🛡️ Shield blocked the fall!':next.phase==='over'?'AAAAAH!':phrases[Math.floor(Math.random()*phrases.length)]);if(d>.6)play('danger');}
+    }finally{
+      sprayBusy.current=false;
+      setShieldProcessing(false);
     }
-    const next=applySpray(g,blocked);if(next===g)return;if(next.phase==='over')next.fallVariant=['wobble','spin','bounce','dizzy','confetti'][Math.floor(Math.random()*5)];commit(next);setSprayToken(v=>v+1);play(next.phase==='over'?'scream':'spray');Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(()=>{});
-    const d=next.damage/next.threshold,m=d>.85?2:d>.55?1:0;const phrases=lines[m];setSpeech(next.lastShieldBlock?'🛡️ Shield blocked the fall!':next.phase==='over'?'AAAAAH!':phrases[Math.floor(Math.random()*phrases.length)]);if(d>.6)play('danger');
   },[commit,play,userId]);
-  function sprayPressed(){const g=gameRef.current;if(g.phase!=='spraying'||(g.mode==='computer'&&g.current===2))return;if(g.damage/g.threshold>.6){commit({...g,phase:'countdown'});play('heartbeat');}else spray();}
+  function sprayPressed(){const g=gameRef.current;if(g.phase!=='spraying'||(g.mode==='computer'&&g.current===2))return;spray();}
   useEffect(()=>{
     if(!active||adPaused)return;
     if(game.phase==='rolling'){

@@ -51,15 +51,21 @@ try {
   # source target separately on Windows causes an endless Ninja CMake rerun
   # because the generated ReactAndroid prefab config is a phony missing input.
   # The Gradle init script below disables only that redundant source build.
-  & .\gradlew.bat --no-daemon --max-workers=2 -I (Join-Path $ProjectRoot 'skip-expo-native.gradle') app:assembleRelease app:bundleRelease
-  if ($LASTEXITCODE -ne 0) { throw "Android release packaging failed with exit code $LASTEXITCODE" }
+  # Build a compact ARM64 APK for modern Android phones. Build the Play Store
+  # bundle separately with the default architecture list so Google Play can
+  # deliver the correct native libraries to each supported device.
+  & .\gradlew.bat --no-daemon --max-workers=2 -I (Join-Path $ProjectRoot 'skip-expo-native.gradle') -PreactNativeArchitectures=arm64-v8a app:assembleRelease
+  if ($LASTEXITCODE -ne 0) { throw "ARM64 APK packaging failed with exit code $LASTEXITCODE" }
+  $Arm64Apk = Join-Path $AndroidRoot 'app/build/outputs/apk/release/app-release.apk'
+  & .\gradlew.bat --no-daemon --max-workers=2 -I (Join-Path $ProjectRoot 'skip-expo-native.gradle') app:bundleRelease
+  if ($LASTEXITCODE -ne 0) { throw "Android App Bundle packaging failed with exit code $LASTEXITCODE" }
 }
 finally {
   Pop-Location
 }
 
-$Artifacts = if ($env:EGGTISSUE_OUTPUT_DIR) { $env:EGGTISSUE_OUTPUT_DIR } else { Join-Path (Split-Path $ProjectRoot -Parent) 'artifacts' }
+$Artifacts = if ($env:EGGTISSUE_OUTPUT_DIR) { $env:EGGTISSUE_OUTPUT_DIR } else { Join-Path $ProjectRoot 'artifacts/phone-update' }
 New-Item -ItemType Directory -Force -Path $Artifacts | Out-Null
-Copy-Item (Join-Path $AndroidRoot 'app/build/outputs/apk/release/app-release.apk') (Join-Path $Artifacts 'Egg-Wet-Tissue-Challenge-Native-React.apk') -Force
+Copy-Item $Arm64Apk (Join-Path $Artifacts 'Egg-Wet-Tissue-Challenge-Native-React-arm64.apk') -Force
 Copy-Item (Join-Path $AndroidRoot 'app/build/outputs/bundle/release/app-release.aab') (Join-Path $Artifacts 'Egg-Wet-Tissue-Challenge-Native-React.aab') -Force
 Write-Host "Release artifacts saved in $Artifacts"
