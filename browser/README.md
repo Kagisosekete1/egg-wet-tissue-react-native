@@ -15,7 +15,7 @@ This edition reuses the original mobile game's rule module and the copied projec
 - Results: actual local computer-round history and a personal best. No invented leaderboard players.
 - Profile: local name, XP title, sound settings.
 
-The browser connects the original Supabase accounts, public rankings, profile photos and battle invitations. Adventure coins, levels and local tools remain on this device; account ranking points and online inventory are separate. Android rewarded adverts use the app bridge and are unavailable in Chrome. The Site’s current sharing settings are preserved. Computer round points follow the original signed scoring formula. Pass-and-play rounds do not affect solo points, levels or daily missions. Device storage can be cleared by the browser; it is not a cloud backup.
+The browser connects the original Supabase accounts, public rankings, profile photos and battle invitations. Signed-in adventure progress (coins, levels, XP, wins, history and tools) is stored in a private per-account Supabase save and copied to local storage for offline play. Guests remain device-local. The account save requires `supabase/migrations/021_account_adventure_saves.sql`; until that migration is applied, the game keeps local progress and shows a sync error instead of claiming it is backed up. Account ranking points and the online battle wallet remain separate. Android rewarded adverts use the app bridge and are unavailable in Chrome. The Site’s current sharing settings are preserved. Computer round points follow the original signed scoring formula. Pass-and-play rounds do not affect solo progress or daily missions.
 
 ## Build and checks
 

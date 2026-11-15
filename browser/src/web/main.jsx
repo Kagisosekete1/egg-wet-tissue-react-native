@@ -10,6 +10,7 @@ import {gameAudio} from './audio';
 import Portal from './Portal';
 import {read,write} from './play-ui';
 import {levelAt,loadProgress,recordRound,isLevelUnlocked,unlockedLevel,SHIELDS} from './progression';
+import {hasAdventureProgress,loadAdventureSave,saveAdventureSave} from './services/adventureSave';
 import {POWERUP_CATALOG,uuid} from './rules';
 import './styles.css';
 const KEY='egg-2d-progress-v1';
@@ -35,6 +36,7 @@ function App(){
  const changeVisual=mode=>{setVisualMode(mode);write('egg-visual-mode',mode);document.documentElement.dataset.visual=mode;};
  const [route,setRoute]=useState(getRoute),[progress,setProgress]=useState(()=>loadProgress(read(KEY,null))),[audioOn,setAudioOn]=useState(()=>read('egg-2d-sound','1')==='1'),[best,setBest]=useState(()=>Number(read('egg-2d-best',0))||0);
  const progressRef=useRef(progress),reported=useRef(new Set());
+ const cloudReady=useRef(null),cloudTimer=useRef(null),cloudQueue=useRef(Promise.resolve());
  const [rankingRound,setRankingRound]=useState(null);
  useEffect(()=>{const synced=e=>{if(e.detail.userId!==account.user?.id)return;setRankingRound(row=>row?.gameId===e.detail.gameId?{...row,status:'synced',receipt:e.detail.receipt}:row);};window.addEventListener('egg-ranking-result',synced);return()=>window.removeEventListener('egg-ranking-result',synced);},[account.user?.id]);
  const [musicOn,setMusicOn]=useState(()=>read('egg-2d-music','1')==='1');
@@ -44,7 +46,9 @@ function App(){
  const [settings,setSettings]=useState(()=>{try{const p=JSON.parse(read('egg-2d-setup','null'));return {mode:p?.mode==='friend'?'friend':'computer',difficulty:['easy','normal','hard'].includes(p?.difficulty)?p.difficulty:'normal',gameMode:['classic','sudden','chaos','tour'].includes(p?.gameMode)?p.gameMode:'classic'};}catch{return {mode:'computer',difficulty:'normal',gameMode:'classic'};}});
  useEffect(()=>{const changed=()=>setRoute(getRoute());window.addEventListener('hashchange',changed);return()=>window.removeEventListener('hashchange',changed);},[]);
  useEffect(()=>{write('egg-2d-setup',JSON.stringify(settings));},[settings]);
- function updateProgress(next){progressRef.current=next;setProgress(next);write(KEY,JSON.stringify(next));}
+ useEffect(()=>{let active=true;const userId=account.user?.id;cloudReady.current=null;if(!userId){account.setAdventureSync('device');return()=>{active=false;};}account.setAdventureSync('loading');(async()=>{const cloud=await loadAdventureSave(userId);if(!active||account.user?.id!==userId)return;const local=progressRef.current;let selected=local,uploadLocal=false;if(cloud){const localAt=Date.parse(local.savedAt||'')||0,cloudAt=Date.parse(cloud.savedAt||'')||0;if(hasAdventureProgress(local)&&localAt>cloudAt)uploadLocal=true;else selected=cloud;}else if(hasAdventureProgress(local))uploadLocal=true;if(uploadLocal&&!selected.savedAt)selected={...selected,savedAt:new Date().toISOString()};progressRef.current=selected;setProgress(selected);write(KEY,JSON.stringify(selected));cloudReady.current=userId;account.setAdventureSync(cloud?'saved':hasAdventureProgress(selected)?'pending':'ready');})().catch(()=>{if(active&&account.user?.id===userId){cloudReady.current=null;account.setAdventureSync('error');}});return()=>{active=false;};},[account.user?.id]);
+ useEffect(()=>{const userId=account.user?.id;if(!userId||cloudReady.current!==userId||!hasAdventureProgress(progress))return;clearTimeout(cloudTimer.current);account.setAdventureSync('pending');const snapshot=progress;cloudTimer.current=setTimeout(()=>{cloudQueue.current=cloudQueue.current.catch(()=>{}).then(()=>{if(cloudReady.current!==userId)return null;return saveAdventureSave(userId,snapshot);}).then(saved=>{if(saved&&cloudReady.current===userId)account.setAdventureSync('saved');}).catch(()=>{if(cloudReady.current===userId)account.setAdventureSync('error');});},450);return()=>clearTimeout(cloudTimer.current);},[progress,account.user?.id]);
+ function updateProgress(next){const saved={...next,savedAt:new Date().toISOString()};progressRef.current=saved;setProgress(saved);write(KEY,JSON.stringify(saved));}
  const giftClaims=useGiftClaims(account.user?.id,progressRef,updateProgress,calendarTick,account.loading);
  function navigate(path){if(path==='setup'||path==='levels')gameAudio.prepare();location.hash=`/${path}`;setRoute(getRoute());}
  function launch(level){if(level&&!isLevelUnlocked(progressRef.current,level.id))return;const config=level?{mode:'computer',difficulty:level.difficulty,gameMode:level.gameMode,level:String(level.id)}:settings;gameAudio.startRound();gameAudio.unlock();location.hash='/play?'+new URLSearchParams(config).toString();setRoute(getRoute());}
