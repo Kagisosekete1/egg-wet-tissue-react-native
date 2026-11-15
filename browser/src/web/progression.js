@@ -16,7 +16,7 @@ export const LEVELS=[
  {id:12,title:'Cloud champion',world:'Cloud Garden',difficulty:'hard',gameMode:'tour',tip:'Win the best-of-three final.'},
 ];
 export const STYLES=[{id:'classic',name:'Classic',icon:'◉',detail:'The original roll-and-spray game.'},{id:'sudden',name:'Sudden Death',icon:'ϟ',detail:'The tissue starts wet and weak.'},{id:'chaos',name:'Chaos Cards',icon:'✦',detail:'Surprise cards can change your sprays.'},{id:'tour',name:'Tournament',icon:'♛',detail:'First to two wins. Best of three rounds.'}];
-export const EMPTY_PROGRESS={version:1,xp:0,points:0,wins:0,games:0,safeSprays:0,levels:{},history:[],daily:{},playerName:'Player'};
+export const EMPTY_PROGRESS={version:1,xp:0,points:0,wins:0,games:0,safeSprays:0,best:0,levels:{},history:[],daily:{},playerName:'Player'};
 export const todayKey=dayKey;
 export function loadProgress(value){try{const p=JSON.parse(value||'null');if(!p||p.version!==1)return {...EMPTY_PROGRESS};return {...EMPTY_PROGRESS,...p,levels:p.levels||{},history:Array.isArray(p.history)?p.history.slice(0,30):[],daily:p.daily||{}};}catch{return {...EMPTY_PROGRESS};}}
 export function roundPoints(game,win){const base=Math.min(60,Math.max(0,game.safeSprays)*2)+Math.min(20,Math.max(0,game.rounds)*2)+20;const score=Math.floor(base*({easy:1,normal:1.5,hard:2}[game.difficulty]||1));return win?score:-score;}

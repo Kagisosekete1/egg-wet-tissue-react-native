@@ -22,5 +22,5 @@ export async function saveAdventureSave(userId,progress){
 
 export function hasAdventureProgress(progress){
   if(!progress)return false;
-  return Number(progress.points)>0||Number(progress.xp)>0||Number(progress.wins)>0||Number(progress.games)>0||Object.keys(progress.levels||{}).length>0||Array.isArray(progress.history)&&progress.history.length>0||Object.keys(progress.inventory||{}).length>0||Array.isArray(progress.shields)&&progress.shields.length>0;
+  return Number(progress.points)>0||Number(progress.xp)>0||Number(progress.wins)>0||Number(progress.games)>0||Number(progress.best)>0||Object.keys(progress.levels||{}).length>0||Array.isArray(progress.history)&&progress.history.length>0||Object.keys(progress.inventory||{}).length>0||Array.isArray(progress.shields)&&progress.shields.length>0;
 }
