@@ -41,10 +41,31 @@ export default function GameScreen(){
   useEffect(()=>{if(!active||over)return;const frame=requestAnimationFrame(()=>startGame());return()=>cancelAnimationFrame(frame);},[active,over,startGame]);
   useEffect(()=>{
     let current=true;
-    if(!userId){setPowerInventory({});setPowerInventoryLoaded(true);return()=>{current=false;};}
-    if(!active){setPowerInventoryLoaded(false);return()=>{current=false;};}
-    loadEquippedShield(userId).then(value=>{if(current){shieldRef.current=value;setEquippedShield(value);}}).catch(()=>{});
-    loadPowerupInventory(userId).then(value=>{if(current)setPowerInventory(value);}).catch(()=>{}).finally(()=>{if(current)setPowerInventoryLoaded(true);});
+    if (!userId) shieldRef.current = null;
+    Promise.resolve().then(async () => {
+      if (!current) return;
+      if (!userId) {
+        setEquippedShield(null);
+        setPowerInventory({});
+        setPowerInventoryLoaded(true);
+        return;
+      }
+      setPowerInventoryLoaded(false);
+      if (!active) return;
+      loadEquippedShield(userId).then(value => {
+        if (!current) return;
+        shieldRef.current = value;
+        setEquippedShield(value);
+      }).catch(() => {});
+      try {
+        const inventory = await loadPowerupInventory(userId);
+        if (current) setPowerInventory(inventory);
+      } catch {
+        if (current) setPowerInventory({});
+      } finally {
+        if (current) setPowerInventoryLoaded(true);
+      }
+    });
     return()=>{current=false;};
   },[active,userId]);
   const finalize=useCallback(g=>{

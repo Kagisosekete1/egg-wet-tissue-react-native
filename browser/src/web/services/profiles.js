@@ -35,11 +35,12 @@ async function readPlayers(table) {
   return {rows,error:null};
 }
 export async function loadLeaderboard() {
- const [rank,current,legacy]=await Promise.all([supabase.rpc('get_game_leaderboard'),readPlayers('game_profiles'),readPlayers('profiles')]);
+ const [rank,current,legacy,levels]=await Promise.all([supabase.rpc('get_game_leaderboard'),readPlayers('game_profiles'),readPlayers('profiles'),supabase.rpc('get_egg_adventure_levels')]);
  if(rank.error&&current.error&&legacy.error)throw rank.error;
  const photos=new Map(mergeProfiles(current.rows||[],legacy.rows||[]).map(p=>[p.id,p]));
  const ranking=rank.error?mergeProfiles(current.rows||[],legacy.rows||[]):mergeProfiles(rank.data||[],[]);
- return ranking.map(p=>{const sources=[...new Set([...avatarSources(p),...avatarSources(photos.get(p.id))])];return {...p,avatar_url:sources[0]||null,avatar_urls:sources};});
+ const levelById=new Map((Array.isArray(levels.data)?levels.data:[]).map(row=>[row.user_id,row.adventure_level]));
+ return ranking.map(p=>{const sources=[...new Set([...avatarSources(p),...avatarSources(photos.get(p.id))])];return {...p,level:levelById.get(p.id)||1,avatar_url:sources[0]||null,avatar_urls:sources};});
 }
 
 export async function ensureGameProfile(user) {
@@ -74,7 +75,9 @@ export function gamePoints({difficulty='normal',safeSprays=0,rounds=0,won=false}
   return won ? points : -points;
 }
 export async function recordGameResult(result,expectedUserId) {
- return accountRpc('record_game_result',{p_game_id:result.gameId,p_difficulty:result.difficulty,p_game_mode:result.gameMode,p_opponent:result.mode,p_safe_sprays:result.safeSprays,p_rounds:result.rounds,p_final_roll:result.finalRoll||1,p_won:result.won},expectedUserId);
+ const receipt=await accountRpc('record_game_result',{p_game_id:result.gameId,p_difficulty:result.difficulty,p_game_mode:result.gameMode,p_opponent:result.mode,p_safe_sprays:result.safeSprays,p_rounds:result.rounds,p_final_roll:result.finalRoll||1,p_won:result.won},expectedUserId);
+ if(result.clearedLevel)try{await accountRpc('record_egg_level_clear',{p_level:result.clearedLevel,p_game_id:result.gameId},expectedUserId);}catch(error){if(error?.code!=='PGRST202'&&error?.status!==404)throw error;}
+ return receipt;
 }
 
 const resultQueue=new ResultQueue({read,write,submit:recordGameResult,notify:detail=>{window.dispatchEvent(new CustomEvent('egg-ranking-result',{detail}));}});

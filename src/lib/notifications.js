@@ -47,3 +47,14 @@ export async function getPushSubscriptionId() {
   initializeNotifications();
   return OneSignal.User.pushSubscription.getIdAsync();
 }
+
+let permissionRequest;
+export function requestNotificationsIfNeeded() {
+  if (permissionRequest) return permissionRequest;
+  permissionRequest = (async () => {
+    if (!initialized || await OneSignal.Notifications.getPermissionAsync()) return;
+    if (!await OneSignal.Notifications.canRequestPermission()) return;
+    await enableNotifications();
+  })().finally(() => {permissionRequest=undefined;});
+  return permissionRequest;
+}

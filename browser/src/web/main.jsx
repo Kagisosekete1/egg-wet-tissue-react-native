@@ -14,28 +14,32 @@ import {POWERUP_CATALOG,uuid} from './rules';
 import './styles.css';
 const KEY='egg-2d-progress-v1';
 const initialVisual=read('egg-visual-mode',window.matchMedia('(max-width: 600px)').matches?'light':'full');
-const requestedMotion=new URLSearchParams(location.search).get('motion');
-const initialMotion=requestedMotion==='on'?'on':read('egg-scenery-motion',window.matchMedia('(prefers-reduced-motion: reduce)').matches?'off':'on');
-if(requestedMotion==='on')write('egg-scenery-motion','on');
+const params=new URLSearchParams(location.search);
+const nativeApp=Boolean(window.ReactNativeWebView)||params.get('native')==='1';
+const motionKey=nativeApp?'egg-android-scenery-motion':'egg-scenery-motion';
+const requestedMotion=params.get('motion');
+const initialMotion=requestedMotion==='on'?'on':read(motionKey,!nativeApp&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'off':'on');
+if(requestedMotion==='on')write(motionKey,'on');
+document.documentElement.dataset.nativeApp=nativeApp?'on':'off';
 document.documentElement.dataset.motion=initialMotion;
 document.documentElement.dataset.visual=initialVisual==='full'?'full':'light';
 function getRoute(){const [path,query='']=location.hash.replace(/^#\/?/,'').split('?');return {path:path||'home',params:new URLSearchParams(query)};}
 function App(){
  const account=useAccount();
- const pwa=null,install=useInstall();
+ const pwa=null,install=useInstall(!nativeApp);
  const [motionOn,setMotionOn]=useState(initialMotion==='on');
- const toggleMotion=()=>setMotionOn(value=>{write('egg-scenery-motion',value?'off':'on');document.documentElement.dataset.motion=value?'off':'on';return !value;});
+ const toggleMotion=()=>setMotionOn(value=>{write(motionKey,value?'off':'on');document.documentElement.dataset.motion=value?'off':'on';return !value;});
  const [calendarTick,setCalendarTick]=useState(0);
  useEffect(()=>{const timer=setInterval(()=>setCalendarTick(v=>v+1),60000);return()=>clearInterval(timer);},[]);
  const [visualMode,setVisualMode]=useState(initialVisual==='full'?'full':'light');
  const changeVisual=mode=>{setVisualMode(mode);write('egg-visual-mode',mode);document.documentElement.dataset.visual=mode;};
  const [route,setRoute]=useState(getRoute),[progress,setProgress]=useState(()=>loadProgress(read(KEY,null))),[audioOn,setAudioOn]=useState(()=>read('egg-2d-sound','1')==='1'),[best,setBest]=useState(()=>Number(read('egg-2d-best',0))||0);
- useEffect(()=>{if(route.path==='setup'||route.path==='levels')gameAudio.prepare();},[route.path]);
  const progressRef=useRef(progress),reported=useRef(new Set());
  const [rankingRound,setRankingRound]=useState(null);
  useEffect(()=>{const synced=e=>{if(e.detail.userId!==account.user?.id)return;setRankingRound(row=>row?.gameId===e.detail.gameId?{...row,status:'synced',receipt:e.detail.receipt}:row);};window.addEventListener('egg-ranking-result',synced);return()=>window.removeEventListener('egg-ranking-result',synced);},[account.user?.id]);
  const [musicOn,setMusicOn]=useState(()=>read('egg-2d-music','1')==='1');
  useEffect(()=>{gameAudio.setEnabled(audioOn);gameAudio.setMusicEnabled(musicOn);},[audioOn,musicOn]);
+ useEffect(()=>{if(['home','setup','levels'].includes(route.path))gameAudio.prepare();},[route.path,audioOn,musicOn]);
  useEffect(()=>{const unlock=()=>gameAudio.unlock(),visibility=()=>gameAudio.setContext({visible:!document.hidden});document.addEventListener('pointerdown',unlock);document.addEventListener('keydown',unlock);document.addEventListener('visibilitychange',visibility);visibility();return()=>{document.removeEventListener('pointerdown',unlock);document.removeEventListener('keydown',unlock);document.removeEventListener('visibilitychange',visibility);gameAudio.stop();};},[]);
  const [settings,setSettings]=useState(()=>{try{const p=JSON.parse(read('egg-2d-setup','null'));return {mode:p?.mode==='friend'?'friend':'computer',difficulty:['easy','normal','hard'].includes(p?.difficulty)?p.difficulty:'normal',gameMode:['classic','sudden','chaos','tour'].includes(p?.gameMode)?p.gameMode:'classic'};}catch{return {mode:'computer',difficulty:'normal',gameMode:'classic'};}});
  useEffect(()=>{const changed=()=>setRoute(getRoute());window.addEventListener('hashchange',changed);return()=>window.removeEventListener('hashchange',changed);},[]);
@@ -44,7 +48,7 @@ function App(){
  const giftClaims=useGiftClaims(account.user?.id,progressRef,updateProgress,calendarTick,account.loading);
  function navigate(path){if(path==='setup'||path==='levels')gameAudio.prepare();location.hash=`/${path}`;setRoute(getRoute());}
  function launch(level){if(level&&!isLevelUnlocked(progressRef.current,level.id))return;const config=level?{mode:'computer',difficulty:level.difficulty,gameMode:level.gameMode,level:String(level.id)}:settings;gameAudio.startRound();gameAudio.unlock();location.hash='/play?'+new URLSearchParams(config).toString();setRoute(getRoute());}
- function onRound(game,context){const next=recordRound(progressRef.current,game,context);updateProgress(next);if(game.mode==='computer'&&game.current===2){const last=next.history[0];if(last&&last.score>best){setBest(last.score);write('egg-2d-best',last.score);}}if(account.user?.id&&!reported.current.has(game.gameId)){reported.current.add(game.gameId);const result={gameId:game.gameId,difficulty:game.difficulty,gameMode:game.gameMode,mode:game.mode,safeSprays:game.safeSprays,rounds:game.rounds,finalRoll:game.lastRoll,won:game.current===2};setRankingRound({gameId:game.gameId,status:'syncing',score:gamePoints(result)});savePendingResult(account.user.id,result).then(()=>account.syncPoints()).then(report=>{if(report?.synced.some(row=>row.gameId===game.gameId))return;setRankingRound(row=>row?.gameId===game.gameId?{...row,status:'pending',error:report?.error}:row);}).catch(error=>setRankingRound(row=>row?.gameId===game.gameId?{...row,status:'unsaved',error}:row));}if(!account.user?.id)setRankingRound({gameId:game.gameId,status:'guest'});return next.history.find(h=>h.id===game.gameId);}
+ function onRound(game,context){const next=recordRound(progressRef.current,game,context);updateProgress(next);if(game.mode==='computer'&&game.current===2){const last=next.history[0];if(last&&last.score>best){setBest(last.score);write('egg-2d-best',last.score);}}if(account.user?.id&&!reported.current.has(game.gameId)){reported.current.add(game.gameId);const result={gameId:game.gameId,difficulty:game.difficulty,gameMode:game.gameMode,mode:game.mode,safeSprays:game.safeSprays,rounds:game.rounds,finalRoll:game.lastRoll,won:game.current===2,clearedLevel:next.history[0]?.prize?.firstClear?context.levelId:null};setRankingRound({gameId:game.gameId,status:'syncing',score:gamePoints(result)});savePendingResult(account.user.id,result).then(()=>account.syncPoints()).then(report=>{if(report?.synced.some(row=>row.gameId===game.gameId))return;setRankingRound(row=>row?.gameId===game.gameId?{...row,status:'pending',error:report?.error}:row);}).catch(error=>setRankingRound(row=>row?.gameId===game.gameId?{...row,status:'unsaved',error}:row));}if(!account.user?.id)setRankingRound({gameId:game.gameId,status:'guest'});return next.history.find(h=>h.id===game.gameId);}
  function buy(type,kind){const p=progressRef.current,item=(kind==='boost'?POWERUP_CATALOG:SHIELDS).find(i=>i.type===type);if(type==='lucky_roll')return 'One roll per player: rerolls are disabled.';if(!item||p.points<item.price)return 'Not enough coins. Play a level or collect a gift.';const next={...p,points:p.points-item.price};if(kind==='boost')next.inventory={...p.inventory,[type]:(p.inventory?.[type]||0)+1};else next.shields=[...(p.shields||[]),{id:uuid(),type,hits:item.hits,equipped:false}];updateProgress(next);return `${item.name} added to your bag.`;}
  function consumeBoost(type){const p=progressRef.current;if(!(p.inventory?.[type]>0))return false;updateProgress({...p,inventory:{...p.inventory,[type]:p.inventory[type]-1}});return true;}
  function consumeShield(id){const p=progressRef.current,shield=(p.shields||[]).find(s=>(id?s.id===id:s.equipped)&&s.hits>0);if(!shield)return false;updateProgress({...p,shields:p.shields.map(s=>s.id===shield.id?{...s,hits:s.hits-1,equipped:s.hits>1}:s)});return true;}

@@ -29,7 +29,8 @@ try{
  assert.equal(d.querySelector('#coach-question').maxLength,800);
  button('I rolled four. What should I do next?').click();await wait(25);
  assert.equal(d.querySelector('#coach-question').value,'I rolled four. What should I do next?');
- assert(button('AI coach coming online').disabled,'unconfigured AI endpoint pretended to be online');
+ assert(!button('Ask game guide').disabled,'offline rules guide was disabled');
+ assert(d.body.textContent.includes('while online AI is unavailable'));
  assert.equal(d.querySelectorAll('.coach-message.assistant').length,0);
  button('Got it — let’s play!').click();await until(()=>!d.querySelector('[role="dialog"]'));
  assert(!button('Roll die').disabled);assert.equal(d.documentElement.dataset.playing,'on');
@@ -38,7 +39,7 @@ try{
  d.querySelector('[aria-label="Ask the Egg Coach"]').click();await until(()=>d.querySelector('.coach-situation'));
  assert(d.querySelector('.coach-situation').textContent.includes('4 sprays remaining'));
  assert(button('Spray ×4').disabled);
- button('Back to game').click();await until(()=>!d.querySelector('[role="dialog"]'));
+ d.querySelector('[aria-label="Close menu"]').click();await until(()=>!d.querySelector('[role="dialog"]'));
  button('Spray ×4').click();await until(()=>button('Spray ×3'));
  assert.equal(d.querySelector('.scene-window'),scene,'turn update replaced the scene window');
  assert.equal(d.querySelector('.scene-window svg'),svg,'turn update replaced the playing picture');

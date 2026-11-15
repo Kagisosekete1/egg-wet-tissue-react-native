@@ -11,6 +11,7 @@
     "Scene.native.js",
     "app/**/*.js",
     "src/**/*.js",
+    "src/assets.d.ts",
     "expo-env.d.ts"
   ],
   "exclude": [

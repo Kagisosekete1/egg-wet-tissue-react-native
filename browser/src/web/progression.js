@@ -4,7 +4,7 @@ import {worldAt} from './worlds.js';
 export const LEVELS=[
  {id:1,title:'First splash',world:'Garden Lab',difficulty:'easy',gameMode:'classic',tip:'Learn the rhythm. Roll, then spray.'},
  {id:2,title:'Steady hands',world:'Garden Lab',difficulty:'easy',gameMode:'classic',tip:'Keep calm as the tissue gets wetter.'},
- {id:3,title:'Card party',world:'Garden Lab',difficulty:'easy',gameMode:'chaos',tip:'Watch for shields, double sprays and protected sprays.'},
+ {id:3,title:'Card party',world:'Garden Lab',difficulty:'easy',gameMode:'chaos',tip:'Watch for shields, stronger sprays and protected sprays.'},
  {id:4,title:'Feeling brave',world:'Garden Lab',difficulty:'normal',gameMode:'classic',tip:'Less tissue strength. More suspense.'},
  {id:5,title:'Already soggy',world:'Garden Lab',difficulty:'easy',gameMode:'sudden',tip:'The tissue starts at 72% damage.'},
  {id:6,title:'Garden champion',world:'Garden Lab',difficulty:'easy',gameMode:'tour',tip:'First to two wins takes the trophy.'},
@@ -20,14 +20,14 @@ export const EMPTY_PROGRESS={version:1,xp:0,points:0,wins:0,games:0,safeSprays:0
 export const todayKey=dayKey;
 export function loadProgress(value){try{const p=JSON.parse(value||'null');if(!p||p.version!==1)return {...EMPTY_PROGRESS};return {...EMPTY_PROGRESS,...p,levels:p.levels||{},history:Array.isArray(p.history)?p.history.slice(0,30):[],daily:p.daily||{}};}catch{return {...EMPTY_PROGRESS};}}
 export function roundPoints(game,win){const base=Math.min(60,Math.max(0,game.safeSprays)*2)+Math.min(20,Math.max(0,game.rounds)*2)+20;const score=Math.floor(base*({easy:1,normal:1.5,hard:2}[game.difficulty]||1));return win?score:-score;}
-export function levelAt(id){if(!Number.isSafeInteger(id)||id<1)return null;const worldIndex=Math.floor((id-1)/6),world=worldAt(worldIndex);if(id<=LEVELS.length)return {...LEVELS[id-1],worldIndex,world:world.name};const step=(id-1)%6,modes=['classic','chaos','classic','sudden','chaos','tour'],titles=['First footprints','Wild splashes','Steady steps','Tissue trouble','One more drop','World champion'];return {id,worldIndex,world:world.name,title:titles[step],difficulty:step<2&&worldIndex%3===0?'normal':'hard',gameMode:modes[(step+(worldIndex%2===0?0:step===2?1:0))%6],tip:step===5?'Win two rounds to unlock the next world.':'Beat the computer to keep your adventure going.'};}
+export function levelAt(id){if(!Number.isSafeInteger(id)||id<1)return null;const worldIndex=Math.floor((id-1)/10),world=worldAt(worldIndex);if(id%10===0)return {id,worldIndex,world:world.name,title:'World champion',difficulty:'hard',gameMode:'tour',tip:'Win two hard rounds to earn 500 coins and unlock the next world.'};if(id<=LEVELS.length)return {...LEVELS[id-1],worldIndex,world:world.name};const step=(id-1)%6,modes=['classic','chaos','classic','sudden','chaos','tour'],titles=['First footprints','Wild splashes','Steady steps','Tissue trouble','One more drop','World champion'];return {id,worldIndex,world:world.name,title:titles[step],difficulty:step<2&&worldIndex%3===0?'normal':'hard',gameMode:modes[(step+(worldIndex%2===0?0:step===2?1:0))%6],tip:step===5?'Win two rounds to unlock the next world.':'Beat the computer to keep your adventure going.'};}
 export function unlockedLevel(progress){let id=1;while(progress.levels[id])id++;return id;}
 export function isLevelUnlocked(progress,id){return Number.isSafeInteger(id)&&id>=1&&(id===1||!!progress.levels[id-1]);}
 export function recordRound(progress,game,{levelId=null,seriesComplete=true,seriesWon=false,date=new Date()}={}){
  if(game.phase!=='over'||progress.history.some(h=>h.id===game.gameId)||game.mode!=='computer')return progress;
  const win=game.current===2,score=roundPoints(game,win),key=todayKey(date),daily=progress.daily[key]||{games:0,wins:0,sprays:0,claimed:[]};
  const levels={...progress.levels};if(win&&levelId&&isLevelUnlocked(progress,levelId)&&((game.gameMode==='tour'&&seriesComplete&&seriesWon)||(game.gameMode!=='tour'&&win))){levels[levelId]=Math.max(levels[levelId]||0,1+(game.safeSprays>=4?1:0)+(game.safeSprays>=8?1:0));}
- const firstClear=!!levelId&&!progress.levels[levelId]&&!!levels[levelId],prize=roundReward(progress,game,{firstClear,levelId,worldClear:firstClear&&levelId%6===0});
+ const firstClear=!!levelId&&!progress.levels[levelId]&&!!levels[levelId],prize=roundReward(progress,game,{firstClear,levelId,worldClear:firstClear&&levelId%10===0});
  const rewarded=grantRoundPrize(progress,prize,game.gameId);
  return {...rewarded,winStreak:prize.streak,wins:progress.wins+(win?1:0),games:progress.games+1,safeSprays:progress.safeSprays+game.safeSprays,levels,history:[{id:game.gameId,win,score,earned:prize.coins,prize,stars:levelId?levels[levelId]||0:0,mode:game.gameMode,difficulty:game.difficulty,date:date.toISOString(),levelId},...progress.history].slice(0,30),daily:{[key]:{...daily,games:daily.games+1,wins:daily.wins+(win?1:0),sprays:daily.sprays+game.safeSprays}}};
 }

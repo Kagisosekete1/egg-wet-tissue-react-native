@@ -10,6 +10,7 @@ for(let turn=0;turn<20;turn++){
  const required=g.roll;for(let i=0;i<required;i++){const before=g.sprayed;g=applySpray(g);assert.equal(g.sprayed,before+1);}
  const completed=g;assert.equal(g.phase,'waiting');g=passDie(g);assert.notEqual(g.current,completed.current);assert.equal(g.phase,'ready');assert.equal(g.roll,0);
 }
+for(let face=1;face<=6;face++){const rolled=finishRoll({...g,phase:'ready'},face,()=>0);assert.equal(rolled.roll,face);assert.equal(rolled.lastRoll,face);assert(rolled.double);}
 let attack={...createGame({mode:'friend'}),threshold:30};let n=useBoost(attack,'pressure_blast');assert.equal(n.phase,'counter');n=resolveCounter(n,true);assert.equal(n.current,attack.current);assert.equal(n.damage,attack.damage);assert.equal(n.phase,'ready');
 n=resolveCounter(useBoost(attack,'pressure_blast'),false);assert.equal(n.current,attack.current);assert(n.damage>0);
 const solo=createGame({mode:'computer'});assert.equal(useBoost(solo,'pressure_blast').current,1);

@@ -1,7 +1,12 @@
 import {completeRoll,nextTurn,applyPowerup,applyCounter,declineCounter} from './rules.js';
 
 // This edition always alternates players. A Chaos extra-turn card becomes a shield.
-export function finishRoll(game,value,random=Math.random){const n=completeRoll(game,value,random);return n.extraTurn?{...n,extraTurn:false,shield:true,card:'🛡️ Chaos Shield: first spray protected.'}:n;}
+export function finishRoll(game,value,random=Math.random){
+ const n=completeRoll(game,value,random);
+ if(n.extraTurn)return {...n,roll:value,extraTurn:false,shield:true,card:'🛡️ Chaos Shield: first spray protected.'};
+ if(n.roll!==value)return {...n,roll:value,card:'🌪️ Splash Surge: first spray adds extra pressure.',double:true};
+ return n;
+}
 export function passDie(game){if(game.phase!=='waiting'||game.sprayed<game.roll)return game;return nextTurn({...game,extraTurn:false});}
 // Attacks change tissue pressure; they do not skip anybody's roll.
 export function useBoost(game,type){if(type==='lucky_roll')return game;const n=applyPowerup(game,type);if(n===game||!['tension_boost','pressure_blast'].includes(type))return n;if(n.phase==='counter')return {...n,rounds:game.rounds,pendingCounter:{...n.pendingCounter,resumePlayer:game.current}};return {...n,current:game.current,rounds:game.rounds,phase:'ready'};}

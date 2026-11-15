@@ -88,6 +88,6 @@ export function nextTurn(game){const current=game.extraTurn?game.current:game.cu
 export function rewindGame(game){
   if(!game.history.length||game.rewardsUsed>=1||game.phase!=='over')return game;
   const snapshot=game.history[0],steps=game.history.length;
-  // Repair the last four sprays, then resume the existing die: never grant a reroll.
-  return {...game,damage:snapshot.damage,total:snapshot.total,safeSprays:snapshot.safeSprays,sprayed:Math.max(0,game.sprayed-steps),phase:'spraying',fallVariant:null,history:[],rewardsUsed:game.rewardsUsed+1,lastShieldBlock:false,lastQuickEscapeBlock:false};
+  // Rewind the shared tissue, then start a clean turn for the player who fell.
+  return {...game,damage:snapshot.damage,total:Math.max(0,game.total-steps),safeSprays:snapshot.safeSprays,roll:0,sprayed:0,phase:'ready',fallVariant:null,history:[],rewardsUsed:game.rewardsUsed+1,shield:false,double:false,slippery:false,extraTurn:false,card:'',lastShieldBlock:false,lastQuickEscapeBlock:false};
 }

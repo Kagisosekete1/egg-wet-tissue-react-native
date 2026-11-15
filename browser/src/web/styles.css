@@ -32,7 +32,7 @@ html[data-visual="light"] .celebration i:nth-child(n+9){display:none}@media(pref
 html[data-visual="light"] .spray-particle:nth-child(n+10){display:none}
 .game-frame{min-height:0}.game-frame:not(.portal) .topbar,.game-frame:not(.portal) .hud,.game-frame:not(.portal) .tissue-coach,.game-frame:not(.portal) .control-deck{flex-shrink:0}.game-frame:not(.portal) .scene-window{min-height:150px}.game-frame:not(.portal){overflow-y:auto}.control-deck{touch-action:manipulation}.scene-window svg{pointer-events:none}
 @media(max-height:640px){.game-frame:not(.portal) .scene-window{min-height:130px}.tissue-coach{padding-top:5px;padding-bottom:5px}.control-deck{padding-top:8px;gap:5px}.play-info{min-height:56px}.play-info h2{font-size:17px}.hud{padding-bottom:7px}}
-@media(prefers-reduced-motion:reduce){html:not([data-motion="on"]) .spray-particle,html:not([data-motion="on"]) .splash-animation,html:not([data-motion="on"]) .landing-animation{display:none}html:not([data-motion="on"]) .egg-fall{animation:none}}
+@media(prefers-reduced-motion:reduce){html:not([data-native-app="on"]):not([data-motion="on"]) .spray-particle,html:not([data-native-app="on"]):not([data-motion="on"]) .splash-animation,html:not([data-native-app="on"]):not([data-motion="on"]) .landing-animation{display:none}html:not([data-native-app="on"]):not([data-motion="on"]) .egg-fall{animation:none}}
 html .cartoon-scene.scene-paused *{animation-play-state:paused!important}
 @media(max-width:600px){.game-frame{box-shadow:none}button:disabled{filter:none}}
 /* Smooth mode changes speed and amplitude; it never silently freezes scenery. */
@@ -60,7 +60,7 @@ html .cartoon-scene.scene-paused *{animation-play-state:paused!important}.motion
 .splash-animation{animation:spray-splash .5s .28s ease-out both}.splash-fan-drop{animation:splash-fan .38s calc(.28s + var(--fan-delay)) ease-out both}.wet-spot{transition:opacity .35s ease-out}.tissue-wet-ripple{animation:wet-ripple .48s .3s ease-out both;transform-box:view-box}.ripple-second{animation-delay:.38s}.tissue-soft-bounce{animation:tissue-impact .3s .3s ease-out both}.egg-splash-reaction{animation:egg-splash-flinch .32s .3s ease-out;transform-origin:0px 0px;transform-box:view-box}
 @keyframes splash-fan{from{opacity:0;transform:translate(0,0) scale(.5)}20%{opacity:1}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.6)}}@keyframes wet-ripple{from{opacity:.85;transform:scale(.4,.65)}to{opacity:0;transform:scale(3.2,1.7)}}@keyframes tissue-impact{35%{transform:translateY(3px)}70%{transform:translateY(-1px)}to{transform:translateY(0)}}@keyframes egg-splash-flinch{30%{transform:translateY(4px) rotate(-1.4deg) scale(1.025,.985)}65%{transform:translateY(-2px) rotate(.5deg)}to{transform:translateY(0) rotate(0) scale(1)}}
 html[data-visual="light"] .splash-fan-drop:nth-child(n+7){display:none}
-@media(prefers-reduced-motion:reduce){html:not([data-motion="on"]) .nozzle-mist,html:not([data-motion="on"]) .tissue-wet-ripple,html:not([data-motion="on"]) .splash-fan-drop{display:none}}
+@media(prefers-reduced-motion:reduce){html:not([data-native-app="on"]):not([data-motion="on"]) .nozzle-mist,html:not([data-native-app="on"]):not([data-motion="on"]) .tissue-wet-ripple,html:not([data-native-app="on"]):not([data-motion="on"]) .splash-fan-drop{display:none}}
 
 .egg-splash-reaction.reaction-even{animation-name:egg-splash-flinch-even}@keyframes egg-splash-flinch-even{30%{transform:translateY(4px) rotate(-1.4deg) scale(1.025,.985)}65%{transform:translateY(-2px) rotate(.5deg)}to{transform:translateY(0) rotate(0) scale(1)}}
 
@@ -112,3 +112,42 @@ html[data-playing="on"],html[data-playing="on"] body{height:var(--play-viewport-
 .current-level-badge{position:absolute;top:8px;left:10px;z-index:2;max-width:calc(100% - 20px);display:flex;align-items:center;border:2px solid #70517f;border-radius:12px;background:#fff4dbee;padding:3px 8px;box-shadow:0 2px 0 #5a3d6940;color:#503464;pointer-events:none;white-space:nowrap}.current-level-badge strong{flex-shrink:0;font-family:'Baloo 2','Nunito',sans-serif;font-size:14px;line-height:18px}.current-level-badge.saved-level strong{font-size:12px}.current-level-badge>span{min-width:0;margin-left:7px;overflow:hidden;text-overflow:ellipsis;font-size:10px;line-height:18px;font-weight:800;color:#80668c}
 
 .ranking-banner{position:relative}.ranking-banner>.ranking-info-button{position:absolute;right:12px;top:12px}.ranking-info-modal .hall-of-fame-info{display:flex;flex-direction:column;gap:7px}.ranking-info-modal .hall-of-fame-info p{font-size:12px;line-height:1.5}
+
+.map-world .level-trail{position:relative;padding:24px 12px 32px;background:linear-gradient(180deg,#d9f8ec,#eaffbd);border-radius:0 0 26px 26px}
+.map-world .level-trail::before{content:"";position:absolute;inset:6px calc(50% - 5px);border-left:10px dashed #fffdf4;filter:drop-shadow(0 2px 0 #73ad85)}
+.map-world .level-card{position:relative;width:89%;margin:0 auto 15px 0;min-height:76px;box-shadow:0 3px 0 #93c3a0}
+.map-world .level-card:nth-child(even){margin-left:auto;margin-right:0}
+.map-world .level-card:nth-child(10n){background:linear-gradient(120deg,#fff0a5,#f8c7f2);border:2px solid #9769bd}
+.map-world .level-number{background:linear-gradient(160deg,#fffde8,#82ddf0);border:2px solid #64458b;border-radius:50%;min-width:46px;box-shadow:0 3px 0 #64458b}
+.map-world .level-card.current-level .level-number{background:linear-gradient(#fff7ab,#ffd34f)}
+
+/* Short screens can scroll without squeezing the playing field or hiding the main controls. */
+.game-frame.match-screen:not(.portal){min-height:0;overflow-y:auto}
+.match-screen>.topbar,.match-screen>.hud,.match-screen>.motion-notice{flex-shrink:0}
+.match-screen .match-heading{min-width:0}
+.match-screen .match-heading>b,.match-screen .match-heading>small{overflow-wrap:anywhere}
+
+@media(max-width:599px){
+ .game-frame.portal{min-height:0}
+ .game-frame.match-screen:not(.portal)>.scene-window{min-height:180px}
+}
+@media(max-width:599px) and (max-height:700px){
+ .match-screen .play-panel{height:clamp(150px,calc(var(--play-viewport-height)*.30),210px);flex-basis:clamp(150px,calc(var(--play-viewport-height)*.30),210px)}
+ .match-screen .play-info{height:54px;min-height:54px}
+ .match-screen .die{width:46px;height:50px}
+ .match-screen>.tissue-coach{height:48px;flex-basis:48px}
+ .match-screen.level-match>.tissue-coach{height:64px;flex-basis:64px}
+ .match-screen .action-row>.big-button{min-height:44px}
+}
+@media(max-width:359px){
+ .match-screen .topbar{gap:5px}
+ .match-screen .play-info{gap:8px}
+ .match-screen .action-row>.big-button{font-size:17px;padding-inline:4px;gap:0}
+}
+@media(min-width:600px) and (orientation:landscape){
+ .game-frame.match-screen:not(.portal)>.scene-window{min-height:160px}
+}
+@media(max-height:560px){
+ .match-screen>.scrim{position:fixed;padding:12px}
+ .match-screen>.scrim>.modal{max-width:450px;max-height:100%;padding:24px 16px 16px;box-shadow:0 4px 0 #39254f}
+}
