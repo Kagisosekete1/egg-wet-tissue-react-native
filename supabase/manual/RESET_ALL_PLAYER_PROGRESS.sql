@@ -1,8 +1,21 @@
--- MANUAL, DESTRUCTIVE reset for a fresh season.
+-- SUPERSEDED FOR CURRENT RECOVERY: DO NOT RUN THIS SCRIPT.
+-- This is a manual, destructive reset for a future fresh season only.
 -- This zeros progress for every authenticated account. It keeps auth accounts,
 -- usernames, avatars, countries, notifications, challenges, and account ownership.
 -- Do not run this to recover old progress; it intentionally replaces all saves.
 begin;
+
+-- Repair installations where the table existed before the progress JSON column
+-- was added. CREATE TABLE IF NOT EXISTS in the migration cannot alter an old table.
+alter table public.egg_adventure_saves
+  add column if not exists progress jsonb not null default '{}'::jsonb;
+alter table public.egg_adventure_saves
+  add column if not exists revision bigint not null default 0;
+alter table public.egg_adventure_saves
+  alter column revision set default 0;
+update public.egg_adventure_saves set revision=0 where revision is null;
+alter table public.egg_adventure_saves
+  alter column revision set not null;
 
 -- Clear match history and level-clear receipts before recreating zero saves.
 delete from public.game_results;
@@ -29,7 +42,7 @@ update public.game_reward_claim_state set last_claim_at=null;
 
 -- Create a fresh, account-owned zero save for every existing Auth account.
 -- Every row is isolated by user_id and protected by migration 021's RLS policies.
-insert into public.egg_adventure_saves(user_id,progress,updated_at)
+insert into public.egg_adventure_saves(user_id,progress,revision,updated_at)
 select u.id,
        jsonb_build_object(
          'version',1,
@@ -52,11 +65,13 @@ select u.id,
          'claimCooldowns','{}'::jsonb,
          'playerName',coalesce(nullif(btrim(gp.username),''),'Player')
        ),
+       0,
        now()
 from auth.users u
 left join public.game_profiles gp on gp.id=u.id
 on conflict(user_id) do update
 set progress=excluded.progress,
+    revision=excluded.revision,
     updated_at=excluded.updated_at;
 
 -- Older app editions may have duplicate leaderboard totals in public.profiles.

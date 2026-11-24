@@ -42,7 +42,7 @@ export const legalPages = {
     title: 'About Egg & Tissue',
     sections: [
       ['The game', 'Egg & Tissue is a playful party challenge about nerve, luck, and one very worried egg. Roll, spray, watch the tissue sag, and try not to be the player who causes the spectacular splat.'],
-      ['Gifts and adventure progress', 'For signed-in players, daily gifts, coins, XP, level stars and adventure progress are saved to the account through Supabase and copied to this browser or phone for offline play. Guest progress stays on this device. These coins are separate from account ranking points, have no cash value and are not transferred into the online battle wallet.'],
+      ['Gifts and adventure progress', 'For signed-in players, daily gifts, coins, XP, level stars and adventure progress are saved to the account through Supabase and copied to this browser or phone for offline play. Players must sign in before playing or earning progress. These coins are separate from account ranking points, have no cash value and are not transferred into the online battle wallet.'],
       ['Features', 'Play against the computer, with a friend on one device, or against players worldwide. Choose Classic, Sudden Death, Chaos Cards, or Tournament style.'],
       ['Made for friendly chaos', 'The egg, tissue damage, water, and physics are a fun simulation. No real eggs or water are needed.'],
       ['Contact', 'semogrouppayments@gmail.com'],

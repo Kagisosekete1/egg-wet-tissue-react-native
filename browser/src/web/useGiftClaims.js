@@ -16,7 +16,7 @@ export function useGiftClaims(userId,progressRef,updateProgress,tick,loading=fal
  const [status,setStatus]=useState({actor:'guest',ready:true,next:0,error:'',pending:null,busy:false}),lock=useRef(false),clockOffset=useRef(0);
  const serverNow=Date.now()+clockOffset.current,local=giftCooldown(progressRef.current,new Date(serverNow),actor);
  const remaining=Math.max(local.remaining,status.actor===actor?status.next-serverNow:0,0),ready=status.actor===actor&&status.ready;
- async function refresh(){const owner=currentActor.current;if(owner==='guest'){setStatus(v=>({...v,actor:owner,ready:true,pending:pendingFor(owner),next:0,error:''}));return;}
+ async function refresh(){const owner=currentActor.current;if(owner==='guest'){setStatus(v=>({...v,actor:owner,ready:false,pending:null,next:0,error:'Sign in before playing or collecting rewards.'}));return;}
   try{const data=await accountRpc('get_game_reward_status',{},owner);if(currentActor.current!==owner)return;
    if(!Number.isFinite(Date.parse(data?.server_time)))throw new Error('Invalid gift status');
    clockOffset.current=Date.parse(data.server_time)-Date.now();
@@ -43,7 +43,7 @@ export function useGiftClaims(userId,progressRef,updateProgress,tick,loading=fal
   }catch(error){if(currentActor.current===owner){await refresh();setStatus(v=>({...v,error:error.message==='Reward cooldown active'?'Your account must wait 24 hours between gift claims.':error.code==='PGRST202'?'Apply server update 016, then retry this saved gift.':'Gift was not confirmed. Retry the saved gift; it will not be awarded twice.',pending:pendingFor(owner)}));}return false;}
   finally{lock.current=false;if(currentActor.current===owner)setStatus(v=>({...v,busy:false}));}
  }
- async function claim(kind,key){if(loading||lock.current||!ready||remaining>0||status.pending)return false;const at=new Date(serverNow),request={requestId:uuid(),kind,key,at:at.toISOString()};if(grant(progressRef.current,request,actor)===progressRef.current)return false;if(kind==='goal'){request.goalDay=dayKey(at);request.goalProgress=progressRef.current.daily?.[request.goalDay];}
+ async function claim(kind,key){if(!userId||loading||lock.current||!ready||remaining>0||status.pending)return false;const at=new Date(serverNow),request={requestId:uuid(),kind,key,at:at.toISOString()};if(grant(progressRef.current,request,actor)===progressRef.current)return false;if(kind==='goal'){request.goalDay=dayKey(at);request.goalProgress=progressRef.current.daily?.[request.goalDay];}
   write(pendingKey(actor),JSON.stringify(request));if(pendingFor(actor)?.requestId!==request.requestId){setStatus(v=>({...v,error:'This browser cannot save a gift safely. Enable site storage and try again.'}));return false;}
   return process(request);
  }

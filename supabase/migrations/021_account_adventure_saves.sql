@@ -4,9 +4,41 @@ begin;
 -- Store a per-account snapshot so a PWA and the Android WebView can share it.
 create table if not exists public.egg_adventure_saves (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  progress jsonb not null default '{}'::jsonb check (jsonb_typeof(progress) = 'object'),
+  progress jsonb not null default '{}'::jsonb,
+  revision bigint not null default 0,
   updated_at timestamptz not null default now()
 );
+
+-- Some databases already had this table from an earlier schema. CREATE TABLE IF
+-- NOT EXISTS does not add columns to an existing table, so repair that shape.
+alter table public.egg_adventure_saves
+  add column if not exists progress jsonb not null default '{}'::jsonb;
+
+-- Older versions may have a required revision column without a default. The
+-- client writes progress snapshots without supplying a revision, so normalize
+-- it to a safe default for both fresh inserts and upserts.
+alter table public.egg_adventure_saves
+  add column if not exists revision bigint not null default 0;
+alter table public.egg_adventure_saves
+  alter column revision set default 0;
+update public.egg_adventure_saves set revision=0 where revision is null;
+alter table public.egg_adventure_saves
+  alter column revision set not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.egg_adventure_saves'::regclass
+      and conname = 'egg_adventure_saves_progress_object_check'
+  ) then
+    alter table public.egg_adventure_saves
+      add constraint egg_adventure_saves_progress_object_check
+      check (jsonb_typeof(progress) = 'object');
+  end if;
+end;
+$$;
 
 alter table public.egg_adventure_saves enable row level security;
 revoke all on public.egg_adventure_saves from public, anon;

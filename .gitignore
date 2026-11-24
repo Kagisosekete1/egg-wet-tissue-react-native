@@ -38,6 +38,9 @@ google-services*.json
 android/local.properties
 android/.gradle/
 android/**/build/
+android/app/src/main/assets/egg-game/
+hs_err_pid*.log
+replay_pid*.log
 android/**/.cxx/
 artifacts/
 supabase/.temp/

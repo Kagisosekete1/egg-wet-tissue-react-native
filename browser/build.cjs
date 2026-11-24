@@ -24,3 +24,4 @@ for(const file of ['game.js','game.css','launch.js']){const name=file.replace('.
 fs.writeFileSync('dist/index.html',onlineHtml);fs.writeFileSync('dist/online.html',onlineHtml);fs.writeFileSync('dist/motion.html',onlineHtml);
 // Existing installs can update to a worker which stops intercepting network requests.
 fs.writeFileSync('dist/sw.js',`self.addEventListener('install',()=>self.skipWaiting());\nself.addEventListener('activate',event=>event.waitUntil((async()=>{await self.clients.claim();await self.registration.unregister();for(const client of await self.clients.matchAll({type:'window'})){const url=new URL(client.url);if(url.searchParams.get('motion-repair')==='1'){const next=new URL('motion?motion=on&recovered=15#/home',self.registration.scope);await client.navigate(next.href);}}})()));\n`);
+require('./native-package.cjs');

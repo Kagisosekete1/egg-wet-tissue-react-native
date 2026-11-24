@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import mobileAds, { TestIds, useRewardedAd } from 'react-native-google-mobile-ads';
 import GameScene from '../../Scene.native';
@@ -17,14 +17,17 @@ import { consumeShieldHit, loadEquippedShield } from '../lib/shields';
 import { applyCounter, applyLuckyRoll, applyPowerup, applySpray, canUsePowerup, completeRoll, createGame, declineCounter, nextTurn, nextSprayWouldFall, POWERUP_CATALOG, randomDie, rewindGame, uuid } from './rules';
 import { consumePowerup, loadPowerupInventory } from '../lib/powerups';
 import { useGameAudio } from './useGameAudio';
+import { saveNativeGameResult } from '../lib/nativeProgress';
 
 const lines=[['Looking good!','Nice and dry 😎','Spray away!'],['Is it sagging?','Gulp…','I don’t like this'],['Nooo! Please!','I’m too young to splat!','Mommy!']];
 function Chip({label,onPress,disabled=false,gold=false}){return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({pressed})=>[styles.chip,gold&&styles.gold,disabled&&{opacity:.45},pressed&&{transform:[{scale:.94}],opacity:.85}]}><Text style={[styles.chipText,gold&&{color:'#07336b'}]}>{label}</Text></Pressable>;}
 
 export default function GameScreen(){
-  const {settings}=useGameSettings(),{user}=useAuth(),{profile,refreshProfile}=useProfile(),{width,height}=useWindowDimensions();
+  const {settings}=useGameSettings(),{user}=useAuth(),{profile,refreshProfile}=useProfile(),{width,height}=useWindowDimensions(),params=useLocalSearchParams();
+  const selectedLevel=useMemo(()=>{const value=Number(params.level);return Number.isSafeInteger(value)&&value>0?value:null;},[params.level]);
+  const gameSettings=useMemo(()=>selectedLevel?{...settings,mode:'computer',difficulty:selectedLevel%10===0?'hard':settings.difficulty,gameMode:'classic'}:settings,[settings,selectedLevel]);
   const userId=user?.id;
-  const [game,setGame]=useState(()=>createGame(settings)),gameRef=useRef(game);
+  const [game,setGame]=useState(()=>createGame(gameSettings)),gameRef=useRef(game);
   const [rematchedGameId,setRematchedGameId]=useState(null);
   const [active,setActive]=useState(false),[face,setFace]=useState(1),[sprayToken,setSprayToken]=useState(0),[resetToken,setResetToken]=useState(0),[speech,setSpeech]=useState(''),[result,setResult]=useState(null),[adPaused,setAdPaused]=useState(false),[adsReady,setAdsReady]=useState(false),[adInitError,setAdInitError]=useState(''),[equippedShield,setEquippedShield]=useState(null),[shieldMessage,setShieldMessage]=useState(''),[shieldProcessing,setShieldProcessing]=useState(false),[powerInventory,setPowerInventory]=useState(/** @type {Record<string,number>} */ ({})),[powerInventoryLoaded,setPowerInventoryLoaded]=useState(false),[powerBusy,setPowerBusy]=useState(false),[powerupsOpen,setPowerupsOpen]=useState(false);
   const pendingReward=useRef(false),submitted=useRef(new Map()),lastMood=useRef(0),tournamentGames=useRef(new Set()),rematchedGames=useRef(new Set()),powerBusyRef=useRef(false),pendingPowerActions=useRef(new Map());
@@ -70,11 +73,11 @@ export default function GameScreen(){
   },[active,userId]);
   const finalize=useCallback(g=>{
     if(g.phase!=='over'||!userId)return Promise.resolve();if(submitted.current.has(g.gameId))return submitted.current.get(g.gameId);
-    const task=(async()=>{const score={gameId:g.gameId,difficulty:g.difficulty,gameMode:g.gameMode,mode:g.mode,safeSprays:g.safeSprays,rounds:g.rounds,finalRoll:g.roll||1,won:g.current===2};
-      try{const saved=await recordGameResult(score);if(gameRef.current.gameId===g.gameId)setResult({points:saved.points_awarded,synced:true});await refreshProfile();}
+    const task=(async()=>{const score={gameId:g.gameId,difficulty:g.difficulty,gameMode:g.gameMode,mode:g.mode,safeSprays:g.safeSprays,rounds:g.rounds,finalRoll:g.roll||1,won:g.current===2,level:selectedLevel};
+      try{const saved=await recordGameResult(score);await saveNativeGameResult(userId,score);if(gameRef.current.gameId===g.gameId)setResult({points:saved.points_awarded,synced:true});await refreshProfile();}
       catch{await savePendingResult(userId,score);if(gameRef.current.gameId===g.gameId)setResult({points:gamePoints(score),synced:false});}
     })();submitted.current.set(g.gameId,task);return task;
-  },[userId,refreshProfile]);
+  },[userId,refreshProfile,selectedLevel]);
   useEffect(()=>{if(over)void finalize(gameRef.current);},[over,game.gameId,finalize]);
   useEffect(()=>{
     // An AI attack opens a short counter response phase. If this account has no
@@ -90,9 +93,9 @@ export default function GameScreen(){
     },350);
     return()=>clearTimeout(timer);
   },[active,game,game.gameId,powerInventory,powerInventoryLoaded,commit]);
-  const reset=useCallback(()=>{const previous=gameRef.current;if(previous.phase==='over')finalize(previous);commit(createGame(settings));setTournament(scores=>settings.gameMode!=='tour'||scores.some(n=>n>=2)?[0,0]:scores);setSpeech('');setResult(null);setFace(1);pendingReward.current=false;setAdPaused(false);setResetToken(v=>v+1);lastMood.current=0;},[commit,settings,finalize]);
+  const reset=useCallback(()=>{const previous=gameRef.current;if(previous.phase==='over')finalize(previous);commit(createGame(gameSettings));setTournament(scores=>gameSettings.gameMode!=='tour'||scores.some(n=>n>=2)?[0,0]:scores);setSpeech('');setResult(null);setFace(1);pendingReward.current=false;setAdPaused(false);setResetToken(v=>v+1);lastMood.current=0;},[commit,gameSettings,finalize]);
   const rematch=useCallback(()=>{const previous=gameRef.current;if(previous.phase!=='over'||rematchedGames.current.has(previous.gameId))return;rematchedGames.current.add(previous.gameId);setRematchedGameId(previous.gameId);reset();},[reset]);
-  const configKey=`${settings.mode}|${settings.difficulty}|${settings.gameMode}`;
+  const configKey=`${gameSettings.mode}|${gameSettings.difficulty}|${gameSettings.gameMode}|${selectedLevel||''}`;
   const previousConfig=useRef(configKey);
   useEffect(()=>{if(previousConfig.current!==configKey){previousConfig.current=configKey;reset();}},[configKey,reset]);
   const roll=useCallback((computerAction=false)=>{const g=gameRef.current,computerTurn=g.mode==='computer'&&g.current===2;if(g.phase!=='ready'||(computerTurn!==computerAction))return;startGame();play('roll');Haptics.selectionAsync().catch(()=>{});commit({...g,phase:'rolling'});},[commit,play,startGame]);
@@ -195,7 +198,7 @@ export default function GameScreen(){
   const rewardLabel=!game.history.length?'Play a turn to unlock the advert':adStatus==='loaded'?'▶  Watch advert · 4 moves back':adStatus==='loading'||!adsReady?'Loading reward advert…':['error','no-fill'].includes(adStatus)?'↻  Retry reward advert':adStatus==='showing'?'Advert playing…':'Prepare reward advert';
   const adMessage=adInitError?`Reward advert service could not start. ${adInitError}`:['error','no-fill'].includes(adStatus)?`Advert ${adStatus==='no-fill'?'inventory is empty right now':`failed to load${adError?.message?`: ${adError.message}`:''}`}. Tap retry.`:'';
   const message=over?`💥 Splat! ${game.current===1?name1:name2} made the egg fall. ${game.current===1?name2:name1} wins!`:game.phase==='counter'?`${game.current===1?name1:name2} can counter this incoming ${game.pendingCounter?.type==='pressure_blast'?'Pressure Blast':'Tension Boost'} or continue.`:game.phase==='countdown'?'😬 3… 2… 1…':game.phase==='rolling'?'Rolling…':game.phase==='waiting'?'Turn complete. The tissue survived… barely.':game.phase==='ready'?(game.current===2&&game.mode==='computer'?'Computer is thinking…':'Roll the dice to begin.'):`${game.current===1?name1:name2} sprays! (${game.sprayed} of ${game.roll}) ${game.card}`;
-  return <SafeAreaView edges={['top','left','right']} style={styles.safe}><StatusBar style="light"/>
+  return <SafeAreaView edges={['top','left','right']} style={styles.safe}><StatusBar style="dark"/>
     <Modal visible={powerupsOpen} transparent animationType="fade" onRequestClose={()=>setPowerupsOpen(false)}>
       <View style={styles.modalBackdrop}><View style={[styles.modalCard,{maxHeight:Math.min(height*.9,width>600?720:760)}]}>
         <View style={styles.modalHeader}><View><Text style={styles.powerTitle}>⚡ Power-ups</Text><Text style={styles.powerHint}>Points · {(Number(profile?.points)||0).toLocaleString()}</Text></View><Chip label="Close" onPress={()=>setPowerupsOpen(false)}/></View>
@@ -215,7 +218,7 @@ export default function GameScreen(){
         </ScrollView>
       </View></View>
     </Modal>
-    <ScrollView contentContainerStyle={styles.scroll}><Text style={styles.title}>Egg & Wet Tissue</Text><View style={styles.panel}>
+    <ScrollView contentContainerStyle={styles.scroll}><Text style={styles.title}>{selectedLevel?`LEVEL ${selectedLevel} · ${selectedLevel%10===0?'World champion':'Egg & Wet Tissue'}`:'Egg & Wet Tissue'}</Text><View style={styles.panel}>
     <View style={styles.scoreLine}><Avatar uri={profile?.avatar_url} size={30}/><Text style={styles.turn}>{over?`🏆 ${won?name1:name2} wins!`:`${game.current===2&&game.mode==='computer'?'🤖':'🔵'} ${game.current===1?name1:name2}’s turn`}</Text><Text style={styles.status}>{over?'Splat!':strength>65?'Egg is safe… for now':strength>30?'Tissue is weakening!':'Danger zone!'}</Text></View>
     <View style={[styles.scene,{height:Math.min(560,Math.max(300,(Math.min(width,540)-48)*1.2))},danger>.85&&!over&&{borderColor:'#ff3b3b'}]}><GameScene danger={danger} sprayToken={sprayToken} falling={over} fallVariant={game.fallVariant} resetToken={resetToken} paused={!active||adPaused} onImpact={impact}/>{!!userId&&!!equippedShield&&<View pointerEvents="none" style={styles.shieldBadge}><Text style={{color:'#08336e',fontWeight:'900',fontSize:12}}>{SHIELD_ICON[equippedShield.shield_type]||'🛡️'} {equippedShield.remaining_hits}/{equippedShield.max_hits}</Text></View>}{!!game.lastShieldBlock&&<View pointerEvents="none" style={styles.shieldFlash}><Text style={{fontSize:36}}>🛡️</Text><Text style={{color:'#fff',fontWeight:'900'}}>BLOCKED!</Text></View>}{!!speech&&<View style={styles.speech}><Text style={{fontSize:12,fontWeight:'900',color:'#2b2146'}}>{speech}</Text></View>}</View>
     {!!shieldMessage&&<Text accessibilityLiveRegion="polite" style={styles.shieldMessage}>{shieldMessage}</Text>}
@@ -231,5 +234,17 @@ export default function GameScreen(){
   </View></ScrollView></SafeAreaView>;
 }
 const SHIELD_ICON={basic:'🛡️',golden:'✨',super:'💎'};
-const styles=StyleSheet.create({safe:{flex:1,backgroundColor:'#504078'},scroll:{padding:12,paddingTop:6,paddingBottom:20,width:'100%',maxWidth:540,alignSelf:'center'},title:{fontSize:26,fontWeight:'900',letterSpacing:-.6,color:'#f5f9ff',marginBottom:8},panel:{backgroundColor:'#71539a',borderWidth:1,borderColor:'#39254f',borderRadius:16,padding:10,gap:8},scoreLine:{flexDirection:'row',alignItems:'center',gap:7},turn:{flex:1,fontSize:13,fontWeight:'900',color:'#fff'},status:{fontSize:11,fontWeight:'800',color:'#58d6a7',maxWidth:'32%',textAlign:'right'},scene:{width:'100%',position:'relative',borderRadius:24,overflow:'hidden',borderWidth:2,borderColor:'#39254f',backgroundColor:'#9fe6ff'},mood:{position:'absolute',top:7,left:10,fontSize:32},speech:{position:'absolute',left:54,top:12,maxWidth:'70%',alignSelf:'flex-start',backgroundColor:'#fff',borderRadius:4,padding:5},shieldBadge:{position:'absolute',right:8,top:8,zIndex:4,backgroundColor:'#e9f8ff',borderColor:'#68d6ff',borderWidth:2,borderRadius:16,paddingHorizontal:10,paddingVertical:6},shieldFlash:{...StyleSheet.absoluteFill,zIndex:3,alignItems:'center',justifyContent:'center',borderWidth:5,borderColor:'#8ee8ff',borderRadius:22,backgroundColor:'#0a9be044'},shieldMessage:{color:'#91eaff',fontWeight:'900',backgroundColor:'#59417f',padding:9,borderRadius:10},powerNotice:{color:'#fff0a3',fontWeight:'900',backgroundColor:'#59417f',padding:9,borderRadius:10},modalBackdrop:{flex:1,backgroundColor:'#001633bb',justifyContent:'center',alignItems:'center',padding:14},modalCard:{width:'100%',maxWidth:620,backgroundColor:'#504078',borderColor:C.gold,borderWidth:2,borderRadius:28,padding:16,gap:12,elevation:18},modalHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},powerupItem:{flexDirection:'row',alignItems:'center',gap:10,padding:11,borderRadius:18,borderWidth:1,borderColor:'#65caff77',backgroundColor:'#71539a'},powerupIcon:{width:46,height:46,borderRadius:15,alignItems:'center',justifyContent:'center',backgroundColor:'#59417f',borderColor:C.gold,borderWidth:1},counterPanel:{gap:8,padding:12,borderRadius:18,borderWidth:1.5,borderColor:C.gold,backgroundColor:'#59417f'},powerTitle:{color:C.gold,fontWeight:'900',fontSize:16},powerHint:{color:'#c3ddff',fontWeight:'800',fontSize:11},controls:{flexDirection:'row',gap:8},box:{flex:1,minWidth:0,padding:9,borderWidth:1,borderColor:'#39254f',borderRadius:12,backgroundColor:'#8665ac'},label:{color:'#c3ddff',fontWeight:'800',fontSize:12,marginBottom:7},strong:{color:'#fff',fontWeight:'900',fontSize:13},hint:{color:'#c3ddff',fontSize:11,lineHeight:16},meter:{height:14,backgroundColor:'#ffffff38',borderRadius:4,overflow:'hidden',marginBottom:9},actions:{flexDirection:'row',gap:8},chip:{flex:1,minWidth:'30%',minHeight:48,paddingHorizontal:9,paddingVertical:10,borderRadius:18,borderWidth:3,borderColor:'#39254f',backgroundColor:'#8665ac',justifyContent:'center',alignItems:'center'},gold:{backgroundColor:'#ffd34f',borderColor:'#39254f'},chipText:{fontSize:12,fontWeight:'900',color:'#f5f9ff',textAlign:'center'},message:{padding:10,borderLeftWidth:5,borderLeftColor:'#ffd34f',backgroundColor:'#8665ac',fontSize:13,fontWeight:'800',color:'#f5f9ff'},reward:{flexDirection:'row',alignItems:'center',gap:8,borderWidth:1.5,borderColor:'#ffd34f',borderRadius:12,padding:10,backgroundColor:'#59417f'},rewardButton:{backgroundColor:'#ffd34f',borderRadius:10,padding:10,maxWidth:'46%',minHeight:46,justifyContent:'center'},result:{backgroundColor:'#59417f',padding:14,borderRadius:14,gap:8}});
+const styles=StyleSheet.create({
+  safe:{flex:1,backgroundColor:C.pale},scroll:{padding:12,paddingTop:6,paddingBottom:20,width:'100%',maxWidth:540,alignSelf:'center'},
+  title:{fontSize:26,fontWeight:'900',letterSpacing:-.6,color:C.ink,marginBottom:8},panel:{backgroundColor:'#fffaf0',borderWidth:1.5,borderColor:C.line,borderRadius:22,padding:10,gap:8},
+  scoreLine:{flexDirection:'row',alignItems:'center',gap:7},turn:{flex:1,fontSize:13,fontWeight:'900',color:C.ink},status:{fontSize:11,fontWeight:'800',color:'#398e7b',maxWidth:'32%',textAlign:'right'},
+  scene:{width:'100%',position:'relative',borderRadius:24,overflow:'hidden',borderWidth:2,borderColor:C.ink,backgroundColor:'#9fe6ff'},mood:{position:'absolute',top:7,left:10,fontSize:32},speech:{position:'absolute',left:54,top:12,maxWidth:'70%',alignSelf:'flex-start',backgroundColor:C.white,borderRadius:12,padding:8},
+  shieldBadge:{position:'absolute',right:8,top:8,zIndex:4,backgroundColor:'#e9f8ff',borderColor:'#68d6ff',borderWidth:2,borderRadius:16,paddingHorizontal:10,paddingVertical:6},shieldFlash:{...StyleSheet.absoluteFill,zIndex:3,alignItems:'center',justifyContent:'center',borderWidth:5,borderColor:'#8ee8ff',borderRadius:22,backgroundColor:'#0a9be044'},
+  shieldMessage:{color:'#225c7b',fontWeight:'900',backgroundColor:'#dcf7fa',padding:9,borderRadius:12},powerNotice:{color:'#76591d',fontWeight:'900',backgroundColor:'#fff0ca',padding:9,borderRadius:12},
+  modalBackdrop:{flex:1,backgroundColor:'#39254f88',justifyContent:'center',alignItems:'center',padding:14},modalCard:{width:'100%',maxWidth:620,backgroundColor:C.pale,borderColor:C.line,borderWidth:2,borderRadius:28,padding:16,gap:12,elevation:18},
+  modalHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:12},powerupItem:{flexDirection:'row',alignItems:'center',gap:10,padding:11,borderRadius:18,borderWidth:1,borderColor:C.line,backgroundColor:'#fffaf0'},powerupIcon:{width:46,height:46,borderRadius:15,alignItems:'center',justifyContent:'center',backgroundColor:'#eadcf8',borderColor:C.line,borderWidth:1},counterPanel:{gap:8,padding:12,borderRadius:18,borderWidth:1.5,borderColor:'#c7a3d9',backgroundColor:'#f5eafa'},
+  powerTitle:{color:C.ink,fontWeight:'900',fontSize:16},powerHint:{color:C.muted,fontWeight:'800',fontSize:11},controls:{flexDirection:'row',gap:8},box:{flex:1,minWidth:0,padding:9,borderWidth:1,borderColor:C.line,borderRadius:16,backgroundColor:'#f5eafa'},label:{color:C.muted,fontWeight:'800',fontSize:12,marginBottom:7},strong:{color:C.ink,fontWeight:'900',fontSize:13},hint:{color:C.muted,fontSize:11,lineHeight:16},meter:{height:14,backgroundColor:'#eadcf8',borderRadius:8,overflow:'hidden',marginBottom:9},
+  actions:{flexDirection:'row',gap:8},chip:{flex:1,minWidth:'30%',minHeight:48,paddingHorizontal:9,paddingVertical:10,borderRadius:17,borderWidth:2,borderColor:C.ink,backgroundColor:'#eadcf8',justifyContent:'center',alignItems:'center'},gold:{backgroundColor:C.gold,borderColor:C.ink},chipText:{fontSize:12,fontWeight:'900',color:C.ink,textAlign:'center'},
+  message:{padding:10,borderLeftWidth:5,borderLeftColor:C.gold,backgroundColor:'#f5eafa',fontSize:13,fontWeight:'800',color:C.ink,borderRadius:12},reward:{flexDirection:'row',alignItems:'center',gap:8,borderWidth:1.5,borderColor:'#e0bc73',borderRadius:16,padding:10,backgroundColor:'#fff0ca'},rewardButton:{backgroundColor:C.gold,borderRadius:13,borderWidth:1.5,borderColor:C.ink,padding:10,maxWidth:'46%',minHeight:46,justifyContent:'center'},result:{backgroundColor:'#f5eafa',padding:14,borderRadius:18,borderWidth:1,borderColor:C.line,gap:8}
+});
 

@@ -97,8 +97,11 @@ android {
         applicationId 'com.semogrouptech.eggtissue'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 22
-        versionName "1.1.12"
+        versionCode 26
+        versionName "1.1.16"
+        externalNativeBuild {
+            cmake { arguments "-DCMAKE_OBJECT_PATH_MAX=120" }
+        }
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
     signingConfigs {
@@ -191,4 +194,28 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+}
+
+// Build and embed the original browser game so the APK opens the same game
+// screens, scenery, movement and audio without launching Chrome or loading the
+// game UI from a separate host. Supabase remains the only progress backend.
+def eggBrowserRoot = new File(projectRoot, "browser")
+def eggBrowserDist = new File(eggBrowserRoot, "dist")
+def eggBrowserAssets = new File(projectDir, "src/main/assets/egg-game")
+tasks.register("buildEggBrowserGame", Exec) {
+    workingDir eggBrowserRoot
+    commandLine "node", "build.cjs"
+    inputs.files(fileTree(eggBrowserRoot) { exclude "node_modules/**", "dist/**" })
+    outputs.dir eggBrowserDist
+}
+tasks.register("syncEggBrowserAssets", Sync) {
+    dependsOn "buildEggBrowserGame"
+    from eggBrowserDist
+    into eggBrowserAssets
+}
+tasks.named("preBuild").configure {
+    dependsOn "syncEggBrowserAssets"
+}
+tasks.matching { it.name == "createBundleReleaseJsAndAssets" }.configureEach {
+    dependsOn "syncEggBrowserAssets"
 }

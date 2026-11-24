@@ -80,14 +80,14 @@ export default function Auth() {
         <Field label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
         <View style={{ gap: 7 }}>
           <Text style={s.label}>Password</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 15, borderColor: C.line, borderWidth: 1, backgroundColor: '#0d5aa8' }}>
-            <TextInput value={password} onChangeText={setPassword} placeholder={signup ? 'At least 6 characters' : 'Enter your password'} placeholderTextColor="#adcaff" secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} textContentType={signup ? 'newPassword' : 'password'} style={{ flex: 1, height: 50, paddingHorizontal: 14, color: C.ink, fontSize: 15 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 15, borderColor: C.line, borderWidth: 1, backgroundColor: '#fffaf1' }}>
+            <TextInput value={password} onChangeText={setPassword} placeholder={signup ? 'At least 6 characters' : 'Enter your password'} placeholderTextColor={C.muted} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} textContentType={signup ? 'newPassword' : 'password'} style={{ flex: 1, height: 50, paddingHorizontal: 14, color: C.ink, fontSize: 15 }} />
             <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={10} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'} style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
-              <Text style={{ color: C.blue, fontWeight: '800' }}>{showPassword ? 'Hide' : 'Show'}</Text>
+              <Text style={{ color: C.ink, fontWeight: '800' }}>{showPassword ? 'Hide' : 'Show'}</Text>
             </Pressable>
           </View>
         </View>
-        {!signup && <Pressable disabled={busy} onPress={resetPassword} hitSlop={8}><Text style={{ color: C.blue, fontWeight: '800', textAlign: 'right' }}>Forgot password?</Text></Pressable>}
+        {!signup && <Pressable disabled={busy} onPress={resetPassword} hitSlop={8}><Text style={{ color: C.ink, fontWeight: '800', textAlign: 'right' }}>Forgot password?</Text></Pressable>}
         <Button title={busy ? 'Please wait…' : signup ? 'Create account' : 'Sign in'} onPress={submit} disabled={busy} />
         <Button title={signup ? 'I already have an account' : 'Create a new account'} onPress={() => setSignup(!signup)} secondary disabled={busy} />
       </Card>

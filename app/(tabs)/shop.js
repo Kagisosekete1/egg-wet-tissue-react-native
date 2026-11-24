@@ -102,8 +102,8 @@ export default function Shop() {
 
   return <Screen>
     <Modal visible={!!popup} transparent animationType="fade" onRequestClose={() => setPopup('')}>
-      <View style={{ flex: 1, backgroundColor: '#001633bb', justifyContent: 'center', alignItems: 'center', padding: 22 }}>
-        <View style={{ width: '100%', maxWidth: 420, padding: 22, gap: 14, borderRadius: 28, backgroundColor: '#063878', borderWidth: 2, borderColor: C.gold }}>
+      <View style={{ flex: 1, backgroundColor: '#39254f88', justifyContent: 'center', alignItems: 'center', padding: 22 }}>
+        <View style={{ width: '100%', maxWidth: 420, padding: 22, gap: 14, borderRadius: 28, backgroundColor: C.pale, borderWidth: 2, borderColor: C.line }}>
           <Text style={{ color: C.gold, fontSize: 22, fontWeight: '900' }}>{popup.startsWith('Money purchases') ? 'Coming soon' : 'Shop update'}</Text>
           <Text style={s.muted}>{popup}</Text>
           <Button title="Okay" onPress={() => setPopup('')} />
@@ -120,14 +120,14 @@ export default function Shop() {
       {!!notice && <Text accessibilityLiveRegion="polite" style={{ color: C.green, fontWeight: '800' }}>{notice}</Text>}
     </Card>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-      {[['boost', '⚡ Boost Shop'], ['shield', '🛡️ Shield Shop']].map(([key, label]) => <Pressable key={key} onPress={() => setSection(key)} accessibilityRole="tab" accessibilityState={{ selected: section === key }} style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 14, borderWidth: 1.3, borderColor: section === key ? C.gold : C.line, backgroundColor: section === key ? C.gold : '#08458f' }}><Text style={{ color: section === key ? '#07336b' : C.ink, fontSize: 13, fontWeight: '900' }}>{label}</Text></Pressable>)}
+      {[['boost', '⚡ Boost Shop'], ['shield', '🛡️ Shield Shop']].map(([key, label]) => <Pressable key={key} onPress={() => setSection(key)} accessibilityRole="tab" accessibilityState={{ selected: section === key }} style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: 14, borderWidth: 1.3, borderColor: section === key ? C.gold : C.line, backgroundColor: section === key ? C.gold : '#f5eafa' }}><Text style={{ color: C.ink, fontSize: 13, fontWeight: '900' }}>{label}</Text></Pressable>)}
     </ScrollView>
     {section === 'boost' ? <>
       <Card><Text style={{ color: C.gold, fontWeight: '900', letterSpacing: 1.2 }}>⚡ CHANGE THE ROUND</Text><Title small>Boost Shop</Title><Text style={s.muted}>Choose an attack, defence or clever dice move. Purchases are saved to your account.</Text></Card>
       {POWERUP_CATALOG.map(item => {
         const missing = Math.max(0, item.price - balance);
-        return <Card key={item.type} style={{ borderColor: '#65caff77', borderWidth: 1.3, padding: 14, borderRadius: 20, gap: 9 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#0b4fa3', borderWidth: 1.3, borderColor: C.gold, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>{item.icon}</Text></View><View style={{ flex: 1, gap: 3 }}><Text style={{ color: C.ink, fontSize: 16, fontWeight: '900' }}>{item.name}</Text><Text style={s.muted}>{item.description}</Text><Text style={{ color: C.gold, fontWeight: '900' }}>Owned · {boostInventory[item.type] || 0}</Text></View></View>
+        return <Card key={item.type} style={{ borderColor: C.line, borderWidth: 1.3, padding: 14, borderRadius: 20, gap: 9 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#eadcf8', borderWidth: 1.3, borderColor: C.line, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 24 }}>{item.icon}</Text></View><View style={{ flex: 1, gap: 3 }}><Text style={{ color: C.ink, fontSize: 16, fontWeight: '900' }}>{item.name}</Text><Text style={s.muted}>{item.description}</Text><Text style={{ color: C.ink, fontWeight: '900' }}>Owned · {boostInventory[item.type] || 0}</Text></View></View>
           {purchaseButtons(item, 'boost')}{missing > 0 && <Text style={s.muted}>You need {missing.toLocaleString()} more points.</Text>}
         </Card>;
       })}

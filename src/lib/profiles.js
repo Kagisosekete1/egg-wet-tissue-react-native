@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
+import { saveNativeGameResult } from './nativeProgress';
 
 const number = (...values) => Math.max(0, ...values.map(v => Number(v) || 0));
 export function usernameFor(user, profile) { return String(profile?.username || user?.user_metadata?.username || user?.email?.split('@')[0] || 'Player').slice(0, 24); }
@@ -8,7 +9,7 @@ export function normalizeProfile(row) {
   const categoryWins = number(row.wins_computer, row.computer_wins, stats.computer, stats.c) + number(row.wins_friend, row.wins_friends, row.friend_wins, stats.friends, stats.f) + number(row.wins_online, row.online_wins, stats.online, stats.o);
   const wins = number(row.wins, row.total_wins, categoryWins);
   const hasScore = ['points','score','total_points','total_score'].some(key=>row[key]!==undefined&&row[key]!==null);
-  return { id: row.user_id || row.id, username: String(row.username || row.display_name || row.name || 'Player').slice(0,24), country_code: /^[A-Z]{2}$/i.test(row.country_code || row.country || '') ? (row.country_code || row.country).toUpperCase() : 'ZA', points: number(row.points, row.score, row.total_points, row.total_score, hasScore?0:categoryWins * 10), wins, avatar_url: row.avatar_url || row.profile_photo_url || row.photo_url || row.profile_picture || null, created_at: row.created_at || '' };
+  return { id: row.user_id || row.id, username: String(row.username || row.display_name || row.name || 'Player').slice(0,24), country_code: /^[A-Z]{2}$/i.test(row.country_code || row.country || '') ? (row.country_code || row.country).toUpperCase() : 'ZA', points: number(row.points, row.score, row.total_points, row.total_score, hasScore?0:categoryWins * 10), wins, level: Number.isFinite(Number(row.level)) ? Math.max(1, Number(row.level)) : null, avatar_url: row.avatar_url || row.profile_photo_url || row.photo_url || row.profile_picture || null, created_at: row.created_at || '' };
 }
 export function mergeProfiles(current, legacy) {
   const merged = new Map();
@@ -80,6 +81,6 @@ export async function savePendingResult(userId,result) {
 }
 export async function syncPendingResults(userId) {
   const key=`egg-pending-results-${userId}`; const pending=JSON.parse(await AsyncStorage.getItem(key)||'[]'); const remaining=[];
-  for(const result of pending) { try { await recordGameResult(result); } catch { remaining.push(result); } }
+  for(const result of pending) { try { await recordGameResult(result); await saveNativeGameResult(userId,result); } catch { remaining.push(result); } }
   await AsyncStorage.setItem(key,JSON.stringify(remaining));
 }
