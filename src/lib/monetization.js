@@ -1,6 +1,6 @@
-// Rewarded placements use Google's test inventory unless the release process
-// explicitly sets EXPO_PUBLIC_ADMOB_TEST_ADS=0 after the account is ready.
-export const USE_TEST_ADS = process.env.EXPO_PUBLIC_ADMOB_TEST_ADS !== '0';
+// Production builds use the configured AdMob unit by default. Set
+// EXPO_PUBLIC_ADMOB_TEST_ADS=1 only for a diagnostic/test build.
+export const USE_TEST_ADS = process.env.EXPO_PUBLIC_ADMOB_TEST_ADS === '1';
 export const REAL_MONEY_PURCHASES_ENABLED = false;
 export const SHOW_REAL_MONEY_SHOP = false;
 export const SHOW_PAID_REWARD_CARDS = true;

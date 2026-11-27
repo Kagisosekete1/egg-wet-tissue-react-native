@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
 import { useFocusEffect, router } from 'expo-router';
 import { Avatar, Button, Card, Header, Screen, Title, s, C } from '../src/components/ui';
@@ -8,8 +8,25 @@ import { expireBattleInvites, respondToBattleInvite } from '../src/lib/battles';
 import { supabase } from '../src/lib/supabase';
 
 export default function Challenges(){
-  const {user}=useAuth(),{refreshProfile}=useProfile();
-  const [items,setItems]=useState([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(null);
+  const {user}=useAuth(),{profile,refreshProfile}=useProfile();
+  const [items,setItems]=useState([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(null),[online,setOnline]=useState([]);
+  useEffect(()=>{
+    if(!user?.id){setOnline([]);return;}
+    let live=true;
+    const channel=supabase.channel('egg-challenge-lobby',{config:{presence:{key:user.id}}})
+      .on('presence',{event:'sync'},()=>{
+        if(!live)return;
+        const unique=new Map();
+        Object.values(channel.presenceState()).flat().forEach(player=>{
+          if(player?.user_id&&player.user_id!==user.id)unique.set(player.user_id,player);
+        });
+        setOnline([...unique.values()].sort((a,b)=>String(a.username||'').localeCompare(String(b.username||''))).slice(0,40));
+      })
+      .subscribe(status=>{
+        if(status==='SUBSCRIBED')void channel.track({user_id:user.id,username:profile?.username||user.email?.split('@')[0]||'Player',avatar_url:profile?.avatar_url||null,online_at:new Date().toISOString()});
+      });
+    return()=>{live=false;supabase.removeChannel(channel);};
+  },[user?.id,user?.email,profile?.username,profile?.avatar_url]);
   const load=useCallback(async()=>{
     if(!user?.id){setItems([]);setLoading(false);return;}
     setLoading(true);
@@ -34,7 +51,7 @@ export default function Challenges(){
     finally{setBusy(null);}
   }
   function enterBattle(battleId){if(battleId)router.push({pathname:'/battle',params:{id:battleId}});}
-  return <Screen><Header title="Battles"/><Text style={s.muted}>Point-stake invitations. Both players commit the same stake; the winner collects the whole pot.</Text><Card style={{gap:10}}><Title small>Invitations and battles</Title>{loading?<ActivityIndicator color={C.blue}/>:items.length===0?<Text style={s.muted}>No battles yet. Open a player profile from Rankings and send a point-stake invitation.</Text>:items.map(c=>{
+  return <Screen><Header title="Battles"/><Text style={s.muted}>Point-stake invitations. Both players commit the same stake; the winner collects the whole pot.</Text><Card style={{gap:10}}><View style={s.headerRow}><Title small>Players online now</Title><Text style={{color:C.green,fontWeight:'900'}}>{online.length} online</Text></View><Text style={s.muted}>Players appear here while they are looking for a battle. Challenge them to send a phone notification, even if they close the app.</Text>{online.length===0?<Text style={s.muted}>No other players are online right now. Keep this screen open to appear in the lobby.</Text>:online.map(player=><Pressable key={player.user_id} onPress={()=>router.push({pathname:'/profile',params:{id:player.user_id}})} style={[s.row,{paddingVertical:9,borderTopWidth:1,borderColor:C.line}]}><Avatar uri={player.avatar_url} size={42}/><View style={{flex:1}}><Text style={{fontWeight:'900',color:C.ink}}>{player.username||'Player'}</Text><Text style={s.muted}>Ready for a challenge · set your stake</Text></View><Text style={{color:C.green,fontSize:12,fontWeight:'900'}}>CHALLENGE ›</Text></Pressable>)}</Card><Card style={{gap:10}}><Title small>Invitations and battles</Title>{loading?<ActivityIndicator color={C.blue}/>:items.length===0?<Text style={s.muted}>No battles yet. Open a player profile from Rankings or the online lobby to send a point-stake invitation.</Text>:items.map(c=>{
     const incoming=c.challenged_id===user?.id,other=incoming?c.challenger:c.challenged,stake=Number(c.stake_points)||0,pot=stake*2,expired=c.status==='declined'&&c.expires_at&&new Date(c.expires_at)<new Date();
     return <Pressable key={c.id} onPress={()=>c.battle_id&&enterBattle(c.battle_id)} style={[s.row,{paddingVertical:12,borderBottomWidth:1,borderColor:C.line,alignItems:'flex-start'}]}>
       <Avatar uri={other?.avatar_url} size={46}/><View style={{flex:1,gap:4}}>

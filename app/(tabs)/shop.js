@@ -47,7 +47,7 @@ export default function Shop() {
         const requestId = pendingPurchaseIds.current[key] || (pendingPurchaseIds.current[key] = uuid());
         await purchasePowerup(item.type, requestId);
         delete pendingPurchaseIds.current[key];
-        setNotice(`${item.name} added to your power-up bag.`);
+        setNotice(`${item.name} added to your inventory.`);
       } else {
         await purchaseShield(item.type, uuid());
         setNotice(`${item.name} purchased. Equip it before your next game.`);

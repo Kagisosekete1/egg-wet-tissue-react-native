@@ -13,7 +13,7 @@ const HOST='https://egg-tissue-cartoon-play.seketefilmstv.chatgpt.site';
 const GAME_URL='file:///android_asset/egg-game/online-native.html?repair=1&native=1#/home';
 const trusted=url=>url.startsWith('file:///android_asset/egg-game/')||(()=>{try{return new URL(url).origin===HOST;}catch{return false;}})();
 export default function CartoonPortal(){
- const {session,loading:authLoading}=useAuth(),web=useRef(null),lastToken=useRef(''),adSession=useRef(null),[failed,setFailed]=useState(false),[loading,setLoading]=useState(true),[canGoBack,setCanGoBack]=useState(false);
+ const {session,loading:authLoading}=useAuth(),web=useRef(null),lastToken=useRef(''),sessionSync=useRef(new Map()),adSession=useRef(null),[failed,setFailed]=useState(false),[loading,setLoading]=useState(true),[canGoBack,setCanGoBack]=useState(false);
  const syncSession=useCallback(()=>{if(!web.current)return;if(!session?.access_token||!session?.refresh_token){lastToken.current='';web.current.injectJavaScript('window.eggNativeSession=null;window.eggReceiveNativeSession?.(null);true;');return;}lastToken.current=session.access_token;const value=JSON.stringify({access_token:session.access_token,refresh_token:session.refresh_token});web.current.injectJavaScript(`window.eggNativeSession=${value};window.eggReceiveNativeSession?.(window.eggNativeSession);true;`);},[session]);
  useEffect(()=>{syncSession();},[syncSession]);
  useEffect(()=>{const subscription=BackHandler.addEventListener('hardwareBackPress',()=>{if(canGoBack){web.current?.goBack();return true;}return false;});return()=>subscription.remove();},[canGoBack]);
@@ -27,7 +27,21 @@ export default function CartoonPortal(){
   if(data.type==='READY'){syncSession();readInbox().then(sendInbox).catch(()=>{});return;}
   if(data.type==='GET_INBOX'){readInbox().then(sendInbox).catch(()=>{});return;}
   if(data.type==='VIBRATE'){const pattern=Array.isArray(data.pattern)?data.pattern.slice(0,10).map(n=>Math.max(0,Math.min(200,Number(n)||0))):Math.max(0,Math.min(200,Number(data.pattern)||0));if(data.pattern===0)Vibration.cancel();else Vibration.vibrate(Array.isArray(pattern)?[0,...pattern]:pattern);return;}
-  if(data.type==='SESSION'&&typeof data.access_token==='string'&&typeof data.refresh_token==='string'&&data.access_token!==lastToken.current){lastToken.current=data.access_token;await supabase.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token}).catch(()=>{});return;}
+  if(data.type==='SESSION'&&typeof data.access_token==='string'&&typeof data.refresh_token==='string'&&typeof data.requestId==='string'&&data.requestId.length<=100){
+   const reply=(ok,userId=null)=>web.current?.injectJavaScript(`window.dispatchEvent(new CustomEvent('egg-native-session-result',{detail:${JSON.stringify({requestId:data.requestId,ok,userId,message:ok?null:'Could not securely save your sign-in on this phone. Please try again.'})}}));true;`);
+   try{
+    let pending=sessionSync.current.get(data.access_token);
+    if(!pending){pending=(async()=>{
+     if(data.access_token!==lastToken.current){const {data:result,error}=await supabase.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});if(error)throw error;if(!result.session?.user?.id)throw new Error('session not returned');}
+     const {data:stored,error:readError}=await supabase.auth.getSession();if(readError)throw readError;
+     if(!stored.session?.user?.id)throw new Error('session not persisted');
+     lastToken.current=stored.session.access_token;
+     return stored.session.user.id;
+    })();sessionSync.current.set(data.access_token,pending);pending.finally(()=>{if(sessionSync.current.get(data.access_token)===pending)sessionSync.current.delete(data.access_token);}).catch(()=>{});}
+    reply(true,await pending);
+   }catch{console.warn('Native sign-in persistence failed.');reply(false);}
+   return;
+  }
   if(data.type==='SIGN_OUT'){lastToken.current='';await supabase.auth.signOut();return;}
   if(data.type==='CHALLENGES')router.push('/challenges');
   if(data.type==='NOTIFICATIONS')router.push('/push-settings');

@@ -3,11 +3,11 @@
 export const uuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.floor(Math.random()*16);return(c==='x'?r:(r&3)|8).toString(16)});
 export const TENSION_STEP = 0.7;
 export const POWERUP_CATALOG = [
-  { type: 'tension_boost', name: 'Tension Boost', price: 500, icon: '⚡', description: 'Leaves the opponent one safe spray before danger.' },
-  { type: 'pressure_blast', name: 'Pressure Blast', price: 1000, icon: '💥', description: 'Adds two tension levels to the opponent.' },
+  { type: 'tension_boost', name: 'Tension Boost', price: 500, icon: '⚡', description: 'Pushes the opponent to one safe spray before danger.' },
+  { type: 'pressure_blast', name: 'Pressure Blast', price: 1000, icon: '💥', description: 'Adds two tension levels; use while the opponent rolls or sprays.' },
   { type: 'emergency_stabilizer', name: 'Emergency Stabilizer', price: 750, icon: '🧊', description: 'Reduces your tension by one level.' },
-  { type: 'quick_escape', name: 'Quick Escape', price: 1500, icon: '🪽', description: 'Cancels the next tension increase from a spray.' },
-  { type: 'counter_attack', name: 'Counter Attack', price: 1000, icon: '🛡️', description: 'Cancels an incoming Boost or Pressure Blast.' },
+  { type: 'quick_escape', name: 'Quick Escape', price: 1500, icon: '🪽', description: 'Blocks your next tension increase, even during an opponent turn.' },
+  { type: 'counter_attack', name: 'Counter Attack', price: 1000, icon: '🛡️', description: 'Cancels incoming pressure or pushes the opponent to one safe spray.' },
   { type: 'lucky_roll', name: 'Lucky Roll', price: 750, icon: '🎲', description: 'Reroll once before your first spray.' },
 ];
 /** @param {GameSettings} settings @returns {GameState} */
@@ -44,28 +44,35 @@ export function applySpray(game,shieldBlocksFall=false){
   const snapshot={...game,history:[]};
   return {...game,damage,sprayed,total:game.total+1,safeSprays:game.safeSprays+(game.current===1&&!over?1:0),shield:false,double:false,quickEscape:escapeBlocked?false:game.quickEscape,quickEscapeOwner:escapeBlocked?null:game.quickEscapeOwner,lastQuickEscapeBlock:escapeBlocked,lastShieldBlock:blocked,history:[...game.history,snapshot].slice(-4),phase:over?'over':sprayed>=game.roll?'waiting':'spraying'};
 }
-/** Apply a purchased attack without ending the round. Attacks cannot cause an immediate fall. */
-export function applyPowerup(game,type){
-  if(game.phase!=='ready')return game;
+/** Apply a power-up without discarding a roll already in progress. Actor 1 is the signed-in player. */
+export function applyPowerup(game,type,actor=1){
+  if(game.phase==='over')return game;
+  const actionPhase=['ready','rolling','spraying','countdown','waiting'].includes(game.phase);
+  if(type==='counter_attack'&&game.phase==='counter'&&game.pendingCounter?.target===actor)return applyCounter(game);
+  if(!actionPhase)return game;
   if(type==='emergency_stabilizer')return game.damage>0?{...game,damage:Math.max(0,game.damage-TENSION_STEP),powerupNotice:'🧊 Emergency Stabilizer · tension reduced.'}:game;
-  if(type==='quick_escape')return game.quickEscape?game:{...game,quickEscape:true,quickEscapeOwner:game.current,powerupNotice:'🪽 Quick Escape ready · your next tension increase is blocked.'};
-  if(type!=='tension_boost'&&type!=='pressure_blast')return game;
+  if(type==='quick_escape')return game.quickEscape?game:{...game,quickEscape:true,quickEscapeOwner:actor,powerupNotice:'🪽 Quick Escape ready · your next tension increase is blocked.'};
+  if(!['tension_boost','pressure_blast','counter_attack'].includes(type))return game;
   const before=game.damage,minimum=game.threshold-TENSION_STEP;
   if(before>=minimum)return game;
-  const target=game.current===1?2:1;
+  const target=actor===1?2:1;
   const escaped=game.quickEscape&&game.quickEscapeOwner===target;
-  const damage=escaped?before:type==='tension_boost'?Math.min(minimum,Math.max(before,game.threshold-TENSION_STEP*2)):Math.min(minimum,before+TENSION_STEP*2);
-  const counterable=(game.mode==='friend'||(game.mode==='computer'&&game.current===2))&&!escaped;
-  const name=type==='tension_boost'?'TENSION BOOST':'PRESSURE BLAST';
-  return {...game,damage,quickEscape:escaped?false:game.quickEscape,quickEscapeOwner:escaped?null:game.quickEscapeOwner,lastQuickEscapeBlock:escaped,powerupNotice:escaped?'🪽 Quick Escape blocked the attack!':`${name}! Opponent's tissue is under pressure.`,current:target,rounds:game.rounds+(target===1?1:0),phase:counterable?'counter':'ready',pendingCounter:counterable?{damageBefore:before,type,target}:null,roll:0,sprayed:0,shield:false,double:false,slippery:false,extraTurn:false,aiBoostAttempted:game.mode==='computer'&&target===2?true:game.aiBoostAttempted,card:''};
+  const damage=escaped?before:type==='tension_boost'?minimum: type==='pressure_blast'?Math.min(minimum,before+TENSION_STEP*2):minimum;
+  const counterable=(game.mode==='friend'||(game.mode==='computer'&&target===1))&&!escaped&&game.phase==='ready';
+  const name=type==='tension_boost'?'TENSION BOOST':type==='pressure_blast'?'PRESSURE BLAST':'COUNTER ATTACK';
+  // If the target is already resolving a roll, keep that turn and its dice intact.
+  // When used before a roll, the attack itself hands the turn to its target.
+  const preserveTurn=game.phase!=='ready'||game.current!==actor;
+  return {...game,damage,quickEscape:escaped?false:game.quickEscape,quickEscapeOwner:escaped?null:game.quickEscapeOwner,lastQuickEscapeBlock:escaped,powerupNotice:escaped?'🪽 Quick Escape blocked the attack!':`${name}! Opponent has one safe spray left.`,current:preserveTurn?game.current:target,rounds:!preserveTurn&&target===1?game.rounds+1:game.rounds,phase:counterable?'counter':game.phase,pendingCounter:counterable?{damageBefore:before,type,target}:game.pendingCounter,roll:game.roll,sprayed:game.sprayed,shield:game.shield,double:game.double,slippery:game.slippery,extraTurn:game.extraTurn,aiBoostAttempted:game.aiBoostAttempted,card:game.card};
 }
-export function canUsePowerup(game,type){
-  if(type==='counter_attack')return game.phase==='counter'&&!!game.pendingCounter;
+export function canUsePowerup(game,type,actor=1){
+  const actionPhase=['ready','rolling','spraying','countdown','waiting'].includes(game.phase);
+  if(type==='counter_attack')return (game.phase==='counter'&&game.pendingCounter?.target===actor)||(actionPhase&&!game.pendingCounter&&game.damage<game.threshold-TENSION_STEP);
   if(type==='lucky_roll')return game.phase==='spraying'&&game.sprayed===0&&!game.luckyUsed;
-  if(game.phase!=='ready')return false;
+  if(!actionPhase)return false;
   if(type==='emergency_stabilizer')return game.damage>0;
   if(type==='quick_escape')return !game.quickEscape;
-  if(type==='tension_boost'||type==='pressure_blast')return game.damage<game.threshold-TENSION_STEP;
+  if(type==='tension_boost'||type==='pressure_blast')return !game.pendingCounter&&game.damage<game.threshold-TENSION_STEP;
   return false;
 }
 /** Counter only an incoming attack and restore the exact pre-attack tension. */

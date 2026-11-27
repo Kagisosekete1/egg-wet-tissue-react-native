@@ -101,7 +101,7 @@ export default function GameScreen(){
   const roll=useCallback((computerAction=false)=>{const g=gameRef.current,computerTurn=g.mode==='computer'&&g.current===2;if(g.phase!=='ready'||(computerTurn!==computerAction))return;startGame();play('roll');Haptics.selectionAsync().catch(()=>{});commit({...g,phase:'rolling'});},[commit,play,startGame]);
   const runPowerup=useCallback(async(type)=>{
     const g=gameRef.current;
-    const allowed=canUsePowerup(g,type)&&(type==='counter_attack'||g.current===1||g.mode==='friend');
+    const allowed=canUsePowerup(g,type,1);
     if(!allowed||!userId||powerBusyRef.current||(powerInventory[type]||0)<=0)return;
     powerBusyRef.current=true;setPowerBusy(true);
     try{
@@ -111,14 +111,20 @@ export default function GameScreen(){
       await consumePowerup(type,g.gameId,actionId);
       pendingPowerActions.current.delete(actionKey);
       setPowerInventory(current=>({...current,[type]:Math.max(0,(current[type]||0)-1)}));
-      let next=g;
-      if(type==='counter_attack')next=applyCounter(g);
+      const current=gameRef.current;
+      if(current.gameId!==g.gameId||!canUsePowerup(current,type,1)){
+        setSpeech('That move passed before the power-up arrived. Your inventory was refreshed.');
+        await loadPowerupInventory(userId).then(setPowerInventory);
+        return;
+      }
+      let next=current;
+      if(type==='counter_attack'&&current.phase==='counter')next=applyCounter(current);
       else if(type==='lucky_roll'){
         play('roll');
-        next=applyLuckyRoll(g,randomDie(g.lastRoll));
+        next=applyLuckyRoll(current,randomDie(current.lastRoll));
         setFace(Math.min(next.roll,6));
-      }else next=applyPowerup(g,type);
-      if(next===g){setSpeech('This power-up is not available in the current game state.');return;}
+      }else next=applyPowerup(current,type,1);
+      if(next===current){setSpeech('This power-up is not available in the current game state.');return;}
       commit(next);setPowerupsOpen(false);setSpeech(next.powerupNotice||'Power-up ready!');Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(()=>{});
     }catch(error){
       setSpeech(error?.message||'That power-up could not be used.');
@@ -149,12 +155,12 @@ export default function GameScreen(){
       }finally{sprayBusy.current=false;setShieldProcessing(false);}
       if(gameRef.current!==g)return;
     }
-    const next=applySpray(g,blocked);if(next===g)return;if(next.phase==='over')next.fallVariant=['wobble','spin','bounce','dizzy','confetti'][Math.floor(Math.random()*5)];commit(next);setSprayToken(v=>v+1);play(next.phase==='over'?'scream':'spray');Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(()=>{});
+    const next=applySpray(g,blocked);if(next===g)return;if(next.phase==='over')next.fallVariant=['wobble','spin','bounce','dizzy','confetti'][Math.floor(Math.random()*5)];commit(next);setSprayToken(v=>v+1);if(next.phase==='over'){play('scream');play('fall');}else play('spray');Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(()=>{});
     const d=next.damage/next.threshold,m=d>.85?2:d>.55?1:0;const phrases=lines[m];setSpeech(next.lastShieldBlock?'🛡️ Shield blocked the fall!':next.phase==='over'?'AAAAAH!':phrases[Math.floor(Math.random()*phrases.length)]);if(d>.6)play('danger');
   },[commit,play,userId]);
   function sprayPressed(){const g=gameRef.current;if(g.phase!=='spraying'||(g.mode==='computer'&&g.current===2))return;if(g.damage/g.threshold>.6){commit({...g,phase:'countdown'});play('heartbeat');}else spray();}
   useEffect(()=>{
-    if(!active||adPaused)return;
+    if(!active||adPaused||powerBusy)return;
     if(game.phase==='rolling'){
       // Keep the die's spin in the 3D scene. Avoid nine full-screen React renders
       // during one roll; that was stuttering the spray canvas on lower-end phones.
@@ -168,7 +174,7 @@ export default function GameScreen(){
         if(current.current!==2||current.mode!=='computer'||current.phase!=='ready'||current.aiBoostAttempted)return;
         const attempted={...current,aiBoostAttempted:true};
         if(canUsePowerup(current,'tension_boost')&&Math.random()<({easy:.12,normal:.24,hard:.36}[current.difficulty]||.24)){
-          const attacked=applyPowerup(attempted,'tension_boost');
+          const attacked=applyPowerup(attempted,'tension_boost',2);
           if(attacked!==attempted){const protectedByEscape=attacked.lastQuickEscapeBlock;commit({...attacked,aiPoints:current.aiPoints-500,powerupNotice:protectedByEscape?'🪽 Quick Escape blocked the Computer Boost!':'🤖 COMPUTER BOOST! Counter it or take your turn.'});setSpeech(protectedByEscape?'🪽 Quick Escape blocked the attack!':'🤖 COMPUTER BOOST!');play('danger');return;}
         }
         commit(attempted);
@@ -183,7 +189,7 @@ export default function GameScreen(){
       },game.phase==='ready'?500:game.sprayed===0?400:350);
       return()=>clearTimeout(timer);
     }
-  },[game,active,adPaused,commit,roll,spray,play]);
+  },[game,active,adPaused,powerBusy,commit,roll,spray,play]);
   useEffect(()=>{if(mood<3&&mood!==lastMood.current)play(`mood${mood}`);lastMood.current=mood;},[mood,play]);
   useEffect(()=>{if(!over||!active||adPaused)return;const timer=setTimeout(()=>play(won?'win':'lose'),1500);return()=>clearTimeout(timer);},[over,won,active,adPaused,play]);
   useEffect(()=>{if(!speech)return;const timer=setTimeout(()=>setSpeech(''),1600);return()=>clearTimeout(timer);},[speech,sprayToken]);
@@ -201,12 +207,12 @@ export default function GameScreen(){
   return <SafeAreaView edges={['top','left','right']} style={styles.safe}><StatusBar style="dark"/>
     <Modal visible={powerupsOpen} transparent animationType="fade" onRequestClose={()=>setPowerupsOpen(false)}>
       <View style={styles.modalBackdrop}><View style={[styles.modalCard,{maxHeight:Math.min(height*.9,width>600?720:760)}]}>
-        <View style={styles.modalHeader}><View><Text style={styles.powerTitle}>⚡ Power-ups</Text><Text style={styles.powerHint}>Points · {(Number(profile?.points)||0).toLocaleString()}</Text></View><Chip label="Close" onPress={()=>setPowerupsOpen(false)}/></View>
+        <View style={styles.modalHeader}><View><Text style={styles.powerTitle}>⚡ Game tools</Text><Text style={styles.powerHint}>Points · {(Number(profile?.points)||0).toLocaleString()}</Text></View><Chip label="Close" onPress={()=>setPowerupsOpen(false)}/></View>
         <ScrollView contentContainerStyle={{gap:10,paddingBottom:12}} showsVerticalScrollIndicator>
           {game.phase==='counter'&&game.pendingCounter&&<View style={styles.counterPanel}><Text style={styles.strong}>🛡️ Incoming {game.pendingCounter.type==='pressure_blast'?'Pressure Blast':'Tension Boost'}</Text><Text style={styles.hint}>Use a Counter Attack to cancel it, or continue your turn.</Text><View style={styles.actions}><Chip label={`Counter · ${powerInventory.counter_attack||0}`} gold onPress={()=>runPowerup('counter_attack')} disabled={powerBusy||!userId||(powerInventory.counter_attack||0)<1}/><Chip label="Continue turn" onPress={()=>{commit(declineCounter(gameRef.current));setPowerupsOpen(false);}} disabled={powerBusy}/></View></View>}
           {POWERUP_CATALOG.map(item=>{
             const owned=powerInventory[item.type]||0;
-            const allowed=canUsePowerup(game,item.type)&&(item.type==='counter_attack'||game.current===1||game.mode==='friend');
+            const allowed=canUsePowerup(game,item.type,1);
             const available=!!userId&&owned>0&&allowed&&!powerBusy;
             return <View key={item.type} style={styles.powerupItem}>
               <View style={styles.powerupIcon}><Text style={{fontSize:26}}>{item.icon}</Text></View>
@@ -230,7 +236,7 @@ export default function GameScreen(){
     {game.phase==='counter'&&<View style={styles.counterPanel}><Text style={styles.strong}>🛡️ Respond to the incoming attack</Text><Text style={styles.hint}>Counter it with one saved Counter Attack, or continue your turn.</Text><View style={styles.actions}><Chip label={`Counter · ${powerInventory.counter_attack||0}`} gold onPress={()=>runPowerup('counter_attack')} disabled={powerBusy||!userId||(powerInventory.counter_attack||0)<1}/><Chip label="Continue turn" onPress={()=>commit(declineCounter(gameRef.current))} disabled={powerBusy}/></View></View>}
     {game.gameMode==='tour'&&<Text style={styles.strong}>🏆 Tournament {tournament[0]}–{tournament[1]} · {tournament.some(n=>n>=2)?`${tournament[0]>tournament[1]?name1:name2} is champion!`:'First to 2 wins'}</Text>}
     {over&&<View style={styles.result}><Text style={styles.strong}>{won?'🏆 You kept the egg safe!':'A brave round!'}</Text><Text style={{fontSize:22,fontWeight:'900',color:(result?.points??points)<0?'#ff9090':C.gold}}>{(result?.points??points)>0?'+':''}{result?.points??points} points</Text><Text style={styles.hint}>{game.safeSprays} safe sprays · {game.rounds} rounds · {game.difficulty} difficulty</Text>{result&&!result.synced&&<Text style={styles.hint}>Saved on this phone. Waiting to sync.</Text>}<Chip label="View leaderboard" onPress={async()=>{await finalize(gameRef.current);router.push('/(tabs)/leaderboard')}}/></View>}
-    <View style={styles.actions}><Chip label="🔁 Rematch" onPress={rematch} disabled={game.phase!=='over'||rematchedGameId===game.gameId}/><Chip label="⚡ Power-ups" onPress={()=>setPowerupsOpen(true)} disabled={powerBusy}/></View><Text style={styles.hint}>Roll 1–6, then spray that many times. Every spray weakens the tissue. The player who makes the egg fall loses.</Text>
+    <View style={styles.actions}><Chip label="🔁 Rematch" onPress={rematch} disabled={game.phase!=='over'||rematchedGameId===game.gameId}/><Chip label="⚡ Tools" onPress={()=>setPowerupsOpen(true)} disabled={powerBusy}/></View><Text style={styles.hint}>Roll 1–6, then spray that many times. Every spray weakens the tissue. The player who makes the egg fall loses.</Text>
   </View></ScrollView></SafeAreaView>;
 }
 const SHIELD_ICON={basic:'🛡️',golden:'✨',super:'💎'};

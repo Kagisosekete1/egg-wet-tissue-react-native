@@ -47,6 +47,16 @@ export async function sprayBattle(battleId) {
   return data;
 }
 
+export async function useBattlePowerup(battleId, powerupType, actionId) {
+  const { data, error } = await supabase.rpc('battle_use_powerup', {
+    p_battle_id: battleId,
+    p_powerup_type: powerupType,
+    p_action_id: actionId,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function forfeitBattle(battleId) {
   const { data, error } = await supabase.rpc('battle_forfeit', { p_battle_id: battleId });
   if (error) throw error;

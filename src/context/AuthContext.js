@@ -13,17 +13,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let mounted = true;
     let authEventReceived = false;
-    const recoveryTimeout = setTimeout(() => {
-      if (mounted && !authEventReceived) {
-        // Do not strand the player on the splash screen if local session restore stalls.
-        setSession(null);
-        setLoading(false);
-      }
-    }, 8000);
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      // Let getSession() finish reading AsyncStorage before treating an empty
+      // initial event as a signed-out account. This avoids a cold-start race
+      // briefly sending returning players to the sign-in screen.
+      if (_event === 'INITIAL_SESSION' && !nextSession) return;
       authEventReceived = true;
-      clearTimeout(recoveryTimeout);
       if (mounted) {
         setSession(nextSession);
         setLoading(false);
@@ -32,20 +27,22 @@ export function AuthProvider({ children }) {
 
     supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) return;
-      clearTimeout(recoveryTimeout);
-      if (!authEventReceived) setSession(error ? null : data.session);
-      setLoading(false);
-    }).catch(() => {
-      clearTimeout(recoveryTimeout);
-      if (mounted) {
-        if (!authEventReceived) setSession(null);
+      if (!authEventReceived) {
+        if (error) console.warn('Could not restore the saved sign-in session:', error.message);
+        setSession(error ? null : data.session);
         setLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) {
+        if (!authEventReceived) {
+          setSession(null);
+          setLoading(false);
+        }
       }
     });
 
     return () => {
       mounted = false;
-      clearTimeout(recoveryTimeout);
       subscription.unsubscribe();
     };
   }, []);

@@ -5,5 +5,8 @@ export const WEB_REDIRECT_URL='https://egg-tissue-cartoon-play.seketefilmstv.cha
 export const IS_NATIVE_APP=Boolean(window.ReactNativeWebView)||new URLSearchParams(location.search).get('native')==='1';
 // The native app passes its SecureStore session through the bridge. Avoid a
 // second WebView-local session that could silently reopen another account.
-export const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLIC_KEY,{auth:{autoRefreshToken:true,persistSession:!IS_NATIVE_APP,detectSessionInUrl:!IS_NATIVE_APP}});
+// In the Android WebView the React Native Supabase client owns refresh-token
+// rotation. A second client refreshing the same rotating token can invalidate
+// the native session and make the game appear to log the player out.
+export const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLIC_KEY,{auth:{autoRefreshToken:!IS_NATIVE_APP,persistSession:!IS_NATIVE_APP,detectSessionInUrl:!IS_NATIVE_APP}});
 export const nativeAction=(type,extra={})=>window.ReactNativeWebView?.postMessage(JSON.stringify({type,...extra}));
